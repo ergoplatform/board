@@ -18,10 +18,9 @@ The Generalized PBB will be based on the paper “A Generic Design for a Public 
 * Access-Control
 * Certified Publishing
 
-The Generalized PBB (GPBB) will implement its REST api and for that it uses the fiware-orion context broker REST api. GPBB will be implemented using Scala and the library Play (or Akka). Scala is a funcional and OO, statically typed system, and it is compiled to Java bytecode, running on the Java VM. Using a statically typed system means that many programming errors can be checked at compile time. Running in the Java VM means that the exe is highly portable, as in principle it can run on any system that supports Java. Also, using a compiled language instead of an interpreted one like Python in general means execution is normally much faster.
+agora-board will implement the GPBB REST api, using underneath the fiware-orion context broker. GPBB will be implemented using Scala and the library Play (or Akka). Scala is a funcional and object-oriented, statically typed system, and it is compiled to Java bytecode, running on the Java VM. Using a statically typed system means that many programming errors can be checked at compile time. Running in the Java VM means that the exe is highly portable, as in principle it can run on any system that supports Java. Also, using a compiled language instead of an interpreted one like Python in general means execution is normally much faster.
 
 The GPBB REST api consists of two basic operations: Get and Post.
-* initial accepted PKs
 
 ## POST
 
@@ -50,6 +49,8 @@ board_attributes: {
 Sends a query and returns a set of posts retrieved from the PBB corresponding to the filter/query.
 GET /bulletin/api/v1/get
 
+Board sections will be mapped to orion's service paths.
+
 query: Q
 
 Response:
@@ -61,6 +62,11 @@ result_attributes: {
   signature: Sget       // Sget = Sign(Q,R,[t])
 }
 
+
+# Fiware-orion
+
+Fiware-orion will be used to store and retrieve the post messages of the Public Bulletin Board. The capabilities to query the context broker using filters will be used and translated into the GPBB layer as a feature. In particular it will be used for the Get query in the GPBB. The specific properties of a Public Bulletin Board mean that the only operations that will be required from fiware-orion will be to create and find entities. The concept of sections in the GPBB, linked to votings and election processes will be translated into fiware orion service paths. General indexes in the GPBB layer will be used as IDs in fiware-orion.
+
 ## Section/Election configuration parameters:
 
 * section: s                   // a hash-like number, must be randomly generated. Base64 encoded, with 132 bits, which means 22 characters
@@ -69,7 +75,7 @@ result_attributes: {
 * hash_method: sha512
 * Access control method:
     - K:// K is a function that gives the set of authorized keys for posting. Can be dynamic or static (K = const). If dynamic: K = K(Pt, user_attrs, board_attrs). 
-    - Initialli accepted PKs
+    - Initially accepted PKs
     - admin: pk    // pk for the admin
     
 * PBB admin: pk
