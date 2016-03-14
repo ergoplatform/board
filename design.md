@@ -27,6 +27,8 @@ The GPBB REST api consists of two basic operations: Get and Post.
 Publishes a post in the PBB, and returns the board attributes for that post.  
 POST /bulletin/api/v1/post  
 
+section + group will be mapped to orion's service paths.
+
 message: m,  
 user_attributes: {  
   section: s,              // a hash-like number, must be randomly generated. Base64 encoded, with 132 bits, which means 22 characters  
@@ -49,19 +51,44 @@ board_attributes: {
 Sends a query and returns a set of posts retrieved from the PBB corresponding to the filter/query.
 GET /bulletin/api/v1/get
 
-Board sections will be mapped to orion's service paths.
+query: {    
+    user_attributes: {  
+        "section" : s,  
+        "group": g  
+    },  
+    board_attributes: {  
+        index_general: iG,    
+        index_section: iS,  
+        timestamp: t,  
+    }  
+    "isPattern": false,  
+}  
 
-query: Q
+Response:  
 
-Response:
-
-response: R,  
+response: [  // the response is a list of posts  
+  {  
+    message: m, 
+    user_attributes: {  
+      section: s,              // a hash-like number, must be randomly generated. Base64 encoded, with 132 bits, which means 22 characters  
+      group: g,  
+      pk: public key,  
+      signature: S              // Sign(m,[s,g])  
+    },  
+    board_attributes: {  
+      index_general: iG,     // index for all messages  
+      index_section: iS,     // index for all messages in this election  
+      timestamp: t,  
+      hash: Hi,              // Hi = H(pi-1) for example. A hash of the previous post *from this section*  
+      signature: Spost       // Spost = Sign(m, user_attributes, [i,t, Hi])  
+    }  
+  }  
+],  
 result_attributes: {  
-  index_section,        // works as a "snapshot indicator"  
+  index_general,        // works as a "snapshot indicator"  
   timestamp: t,  
   signature: Sget       // Sget = Sign(Q,R,[t])  
-}
-
+}  
 
 # Fiware-orion
 
