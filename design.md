@@ -24,24 +24,24 @@ The GPBB REST api consists of two basic operations: Get and Post.
 
 ## POST
 
-Publishes a post in the PBB, and returns the board attributes for that post.
-POST /bulletin/api/v1/post
+Publishes a post in the PBB, and returns the board attributes for that post.  
+POST /bulletin/api/v1/post  
 
-message: m,
-user_attributes: {
-  section: s,              // a hash-like number, must be randomly generated. Base64 encoded, with 132 bits, which means 22 characters
-  group: g,
-  pk: public key,
-  signature: S              // Sign(m,[s,g])
+message: m,  
+user_attributes: {  
+  section: s,              // a hash-like number, must be randomly generated. Base64 encoded, with 132 bits, which means 22 characters  
+  group: g,  
+  pk: public key,  
+  signature: S              // Sign(m,[s,g])  
 }
 
-Reponse:
-board_attributes: {
-  index_general: iG,     // index for all messages
-  index_section: iS,     // index for all messages in this election
-  timestamp: t,
-  hash: Hi,              // Hi = H(pi-1) for example. A hash of the previous post *from this section*
-  signature: Spost       // Spost = Sign(m, user_attributes, [i,t, Hi])
+Reponse:  
+board_attributes: {  
+  index_general: iG,     // index for all messages  
+  index_section: iS,     // index for all messages in this election  
+  timestamp: t,  
+  hash: Hi,              // Hi = H(pi-1) for example. A hash of the previous post *from this section*  
+  signature: Spost       // Spost = Sign(m, user_attributes, [i,t, Hi])  
 }
 
 ## GET
@@ -55,17 +55,21 @@ query: Q
 
 Response:
 
-response: R,
-result_attributes: {
-  index_section,        // works as a "snapshot indicator"
-  timestamp: t,
-  signature: Sget       // Sget = Sign(Q,R,[t])
+response: R,  
+result_attributes: {  
+  index_section,        // works as a "snapshot indicator"  
+  timestamp: t,  
+  signature: Sget       // Sget = Sign(Q,R,[t])  
 }
 
 
 # Fiware-orion
 
 Fiware-orion will be used to store and retrieve the post messages of the Public Bulletin Board. The capabilities to query the context broker using filters will be used and translated into the GPBB layer as a feature. In particular it will be used for the Get query in the GPBB. The specific properties of a Public Bulletin Board mean that the only operations that will be required from fiware-orion will be to create and find entities. The concept of sections in the GPBB, linked to votings and election processes will be translated into fiware orion service paths. General indexes in the GPBB layer will be used as IDs in fiware-orion.
+
+# Deployment
+
+Ansible playbooks will be used for deployment. The reference platform will be Ubuntu 14.04 LTS.
 
 ## Section/Election configuration parameters:
 
@@ -74,7 +78,9 @@ Fiware-orion will be used to store and retrieve the post messages of the Public 
 * init_election: start time
 * hash_method: sha512
 * Access control method:
-    - K:// K is a function that gives the set of authorized keys for posting. Can be dynamic or static (K = const). If dynamic: K = K(Pt, user_attrs, board_attrs). 
+    // K is a function that gives the set of authorized keys for posting. 
+    //It can be dynamic or static (K = const). If dynamic: K = K(Pt, user_attrs, board_attrs).
+    - K: 
     - Initially accepted PKs
     - admin: pk    // pk for the admin
     
