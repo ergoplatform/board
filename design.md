@@ -32,7 +32,7 @@ section + group will be mapped to orion's service paths.
 message: m,  
 user_attributes: {  
   section: s,              // a hash-like number, must be randomly generated. Base64 encoded, with 132 bits, which means 22 characters  
-  group: g,  
+  group: g,                // alphanumeric text, separated by slashes, for different paths  
   pk: public key,  
   signature: S              // Sign(m,[s,g])  
 }
@@ -40,7 +40,6 @@ user_attributes: {
 Reponse:  
 board_attributes: {  
   index_general: iG,     // index for all messages  
-  index_section: iS,     // index for all messages in this election  
   timestamp: t,  
   hash: Hi,              // Hi = H(pi-1) for example. A hash of the previous post *from this section*  
   signature: Spost       // Spost = Sign(m, user_attributes, [i,t, Hi])  
@@ -49,6 +48,7 @@ board_attributes: {
 ## GET
 
 Sends a query and returns a set of posts retrieved from the PBB corresponding to the filter/query.
+
 GET /bulletin/api/v1/get
 
 query: {    
