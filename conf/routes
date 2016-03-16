@@ -4,3 +4,4 @@
 
 # An example PBB post
 POST     /bulletin_post                    controllers.BulletinController.post
+POST     /bulletin_get                    controllers.BulletinController.get

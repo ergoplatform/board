@@ -1,5 +1,6 @@
 import com.google.inject.AbstractModule
 import java.time.Clock
+import models.Backend
 import services.FiwareBackend
 
 /**
@@ -15,8 +16,10 @@ import services.FiwareBackend
 class Module extends AbstractModule {
 
   override def configure() = {
-    // Ask Guice to create an instance of ApplicationTimer when the
-    // application starts.
+    // Set FiwareBackend as the implementation for Backend.
+    bind(classOf[Backend]).to(classOf[FiwareBackend])
+    // Ask Guice to create an instance of FiwareBackend when the
+    // application starts, reducing latency on the first Backend call
     bind(classOf[FiwareBackend]).asEagerSingleton
   }
 
