@@ -14,62 +14,17 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 /**This class has a `Singleton` annotation because we need to make
  * sure we only use one counter per application. Without this
- * annotation we would get a new instance every time a [[Counter]] is
+ * annotation we would get a new instance every time a [[FiwareBackend]] is
  * injected.
  */
-
-case class GetAttribute(name: String, _type: String, value: JsValue)
-case class GetContextElement(id: String, isPattern: String, _type: String, attributes: Seq[GetAttribute])
-case class GetStatusCode(code: String, reasonPhrase: String)
-case class GetContextResponse(contextElement: GetContextElement, statusCode: GetStatusCode)
-case class SuccessfulGetPost(contextResponses: Seq[GetContextResponse])
-
-case class GetErrorCode(code: String, reasonPhrase: String)
-case class FailedGetPost(errorCode: GetErrorCode)
-
-trait FiwareGetValidator {
-  
-  // Get success validators
-  
-  implicit val validateGetAttribute: Reads[GetAttribute] = (
-      (JsPath \ "name").read[String] and
-      (JsPath \ "type").read[String] and
-      (JsPath \ "value").read[JsValue]
-  )(GetAttribute.apply _)
-  
-  implicit val validateGetContextElement: Reads[GetContextElement] = (
-      (JsPath \ "id").read[String] and
-      (JsPath \ "isPattern").read[String] and
-      (JsPath \ "type").read[String] and
-      (JsPath \ "attributes").read[Seq[GetAttribute]]
-  )(GetContextElement.apply _)
-  
-  implicit val validateGetStatusCode: Reads[GetStatusCode] = (
-      (JsPath \ "code").read[String] and
-      (JsPath \ "reasonPhrase").read[String]
-  )(GetStatusCode.apply _)
-  
-  implicit val validateGetContextResponse: Reads[GetContextResponse] = (
-      (JsPath \ "contextElement").read[GetContextElement] and
-      (JsPath \ "statusCode").read[GetStatusCode]
-  )(GetContextResponse.apply _)
-  
-  implicit val validateSuccessfulGetPost: Reads[SuccessfulGetPost] = 
-      (JsPath \ "contextResponses").read[Seq[GetContextResponse]].map{ contextResponses => SuccessfulGetPost(contextResponses)}
-  
-  // Get failure validators
-  
-  implicit val validateGetErrorCode: Reads[GetErrorCode] = (
-      (JsPath \ "code").read[String] and
-      (JsPath \ "reasonPhrase").read[String]
-  )(GetErrorCode.apply _)
-  
-  implicit val validateFailedGet: Reads[FailedGetPost] = 
-      (JsPath \ "errorCode").read[GetErrorCode].map{ errorCode => FailedGetPost(errorCode)}
-}
-
 @Singleton
-class FiwareBackend @Inject() (ws: WSClient) extends Backend with PostWrites with PostReads with FiwareGetValidator {  
+class FiwareBackend @Inject() 
+                     (ws: WSClient) 
+                     extends Backend 
+                     with PostWriteValidator 
+                     with PostReadValidator 
+                     with FiwareQueryReadValidator 
+{  
   
   private val index = new AtomicLong(0)
   
@@ -94,7 +49,7 @@ class FiwareBackend @Inject() (ws: WSClient) extends Backend with PostWrites wit
       case s: JsSuccess[SuccessfulGetPost] => Logger.info(s"Future success:\n${response.json}\n")
                                               promise.success(post.board_attributes)
       case e: JsError => Logger.info(s"Future failure:\n${response.json}\n")
-                         promise.failure(new Exception(s"$response.json"))
+                         promise.failure(new Exception(s"${response.json}"))
     }
   }
   
@@ -130,8 +85,7 @@ class FiwareBackend @Inject() (ws: WSClient) extends Backend with PostWrites wit
    
    private def fiwareParseGetAnswer(response: WSResponse, promise: Promise[Seq[Post]]) {
     response.json.validate[SuccessfulGetPost] match {
-      case s: JsSuccess[SuccessfulGetPost] => Logger.info(s"Future success:\n${response.json}\n")
-                                              var hasMapError = false
+      case s: JsSuccess[SuccessfulGetPost] => var hasMapError = false
                                               val jsOpt: Seq[Option[Post]] = s.get.contextResponses.map(
                                                   _.contextElement.attributes(0).value.validate[Post] match {
                                                       case sp: JsSuccess[Post] => Some(sp.get)
@@ -139,12 +93,15 @@ class FiwareBackend @Inject() (ws: WSClient) extends Backend with PostWrites wit
                                                                          None
                                               })
                                               if(hasMapError) {
+                                                Logger.info(s"0Future failure:\n${response.json}\n")
                                                 promise.failure(new Exception(s"$response.json"))
                                               } else {
+                                                Logger.info(s"1Future success:\n${response.json}\n")
                                                 promise.success(jsOpt.map(_.get))
                                               }
-      case e: JsError => Logger.info(s"Future failure:\n${response.json}\n")
-                         promise.failure(new Exception(s"$response.json"))
+      case e: JsError => val exception = new Error(s"${response.json}")
+                         Logger.info(s"2Future failure:\n${exception}\n")
+                         promise.failure(exception)
     }
    }
    
@@ -158,9 +115,8 @@ class FiwareBackend @Inject() (ws: WSClient) extends Backend with PostWrites wit
                  "Fiware-ServicePath" -> s"/${post.user_attributes.section}/${post.user_attributes.group}")
      .post(data)
      futureResponse onComplete {
-       case Success(response) => Logger.info(s"Future success:\n${response.json}\n")
-                                  fiwareParseGetAnswer(response, promise)
-       case Failure(e) => Logger.info(s"Future failure:\n$e\n")
+       case Success(response) => fiwareParseGetAnswer(response, promise)
+       case Failure(e) => Logger.info(s"3Future failure:\n$e\n")
                          promise.failure(e)
      }     
      promise.future

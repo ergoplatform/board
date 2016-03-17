@@ -25,7 +25,13 @@ import services.FiwareBackend
  */
 
 @Singleton
-class BulletinController @Inject() (actorSystem: ActorSystem)(backend: Backend)(implicit exec: ExecutionContext) extends Controller with PostReads{
+class BulletinController @Inject() 
+                      (actorSystem: ActorSystem)
+                      (backend: Backend)
+                      (implicit exec: ExecutionContext) 
+                      extends Controller 
+                      with PostReadValidator
+{
   
   def post = Action.async { request =>
     process_post_request(request)
@@ -47,7 +53,7 @@ class BulletinController @Inject() (actorSystem: ActorSystem)(backend: Backend)(
         case s: JsSuccess[PostRequest] => { 
                                               backend.Post(s.get) onComplete {
                                                 case Success(p) => promise.success( Ok(s"$p") )
-                                                case e: Failure[ BoardAttributes ] => promise.success( BadRequest(s"$e") )
+                                                case Failure(e) => promise.success( BadRequest(s"${e.getCause.getMessage}") )
                                               }
                                            }
         case e: JsError => promise.success(BadRequest(s"$e"))
@@ -67,16 +73,29 @@ class BulletinController @Inject() (actorSystem: ActorSystem)(backend: Backend)(
     }
   }
   
+  private def jsonValidatePost(json : libs.json.JsValue): JsResult[Post] = {
+    val section = (json \ "user_attributes" \ "section" ).asOpt[String]
+    val group = (json \ "user_attributes" \ "group" ).asOpt[String]
+    val index = (json \ "board_attributes" \ "index" ).asOpt[String]
+    if(section.isDefined && group.isDefined && index.isDefined) {
+      val p = Post("",UserAttributes(section.get,group.get,"",""), BoardAttributes(index.get,"","",""))
+      return JsSuccess(p)
+    }
+    return JsError()
+  }
+  
   private def json_to_backend_get(json : libs.json.JsValue)  : Future[Result] = {
     val promise: Promise[Result] = Promise[Result]()
-    json.validate[Post] match {
-      case s: JsSuccess[Post] => { 
+    // check that the basic elements are there
+    // instead of using json.validate[Post], as many elements are optional
+    jsonValidatePost(json) match { 
+      case s: JsSuccess[Post] => {
                                       backend.Get(s.get) onComplete {
-                                                case Success(p) => promise.success( Ok(s"json:\n$p\n") )
-                                                case e: Failure[ Seq[Post] ] => promise.success( BadRequest(s"json:\n$s\n") )
+                                                case Success(p) => promise.success( Ok(s"$p") )
+                                                case Failure(e) => promise.success( BadRequest(s"${e.getCause.getMessage}") )
                                       }
                                  }
-      case e: JsError => promise.success( BadRequest(s"json:\n$e\n") )
+      case e: JsError => promise.success( BadRequest(s"$e") )
     }
     promise.future
   }

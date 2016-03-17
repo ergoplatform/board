@@ -9,7 +9,7 @@ case class BoardAttributes(index: String, timestamp: String, hash: String, signa
 case class PostRequest(message: String, user_attributes: UserAttributes)
 case class Post(message: String, user_attributes: UserAttributes, board_attributes: BoardAttributes)  
 
-trait PostReads {
+trait PostReadValidator {
   implicit val userAttributesReads: Reads[UserAttributes] = (
       (JsPath \ "section").read[String] and
       (JsPath \ "group").read[String] and
@@ -36,7 +36,7 @@ trait PostReads {
   )(Post.apply _)
 }
 
-trait PostWrites {
+trait PostWriteValidator {
   implicit val userAttributesWrites: Writes[UserAttributes] = (
       (JsPath \ "section").write[String] and
       (JsPath \ "group").write[String] and
