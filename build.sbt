@@ -6,11 +6,15 @@ lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
 scalaVersion := "2.11.7"
 
+resolvers += Resolver.jcenterRepo
+
 libraryDependencies ++= Seq(
   jdbc,
   cache,
   ws,
-  "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.0-RC1" % Test
+  "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.0-RC1" % Test,
+  "com.iheart" %% "play-swagger" % "0.2.2-PLAY2.5",
+  "org.webjars" % "swagger-ui" % "2.1.4"
 )
 
 resolvers += "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases"
