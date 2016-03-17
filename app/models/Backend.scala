@@ -5,5 +5,5 @@ import scala.concurrent.{Future, Promise}
 
 trait Backend {
   def Post(request: PostRequest): Future[BoardAttributes]
-  def Get(request: Post): Seq[Post]
+  def Get(request: Post): Future[Seq[Post]]
 }

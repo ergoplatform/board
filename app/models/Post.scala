@@ -44,19 +44,19 @@ trait PostWrites {
       (JsPath \ "signature").write[String] 
   )(unlift(UserAttributes.unapply))
   
-  implicit val postRequestReads: Writes[PostRequest] = (
+  implicit val postRequestWrites: Writes[PostRequest] = (
       (JsPath \ "message").write[String] and
       (JsPath \ "user_attributes").write[UserAttributes]
   )(unlift(PostRequest.unapply))
   
-  implicit val boardAttributesReads: Writes[BoardAttributes] = (
+  implicit val boardAttributesWrites: Writes[BoardAttributes] = (
       (JsPath \ "index").write[String] and
       (JsPath \ "timestamp").write[String] and
       (JsPath \ "hash").write[String] and
       (JsPath \ "signature").write[String] 
   )(unlift(BoardAttributes.unapply))
   
-  implicit val postReads: Writes[Post] = (
+  implicit val postWrites: Writes[Post] = (
       (JsPath \ "message").write[String] and
       (JsPath \ "user_attributes").write[UserAttributes] and
       (JsPath \ "board_attributes").write[BoardAttributes]
