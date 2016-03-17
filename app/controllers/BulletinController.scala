@@ -15,28 +15,32 @@ import services.FiwareBackend
 
 
 /**
- * This controller creates an `Action` to handle HTTP requests to the
- * application's home page.
+ * This controller creates an `Action` to handle bulletin post and get operations.
  * 
  * @param actorSystem We need the `ActorSystem`'s `Scheduler` to
  * run code after a delay.
+ * @param backend We need a `BoardBackend` to implement the Public Bulletin Board
  * @param exec We need an `ExecutionContext` to execute our
  * asynchronous code.
  */
-
 @Singleton
 class BulletinController @Inject() 
                       (actorSystem: ActorSystem)
-                      (backend: Backend)
+                      (backend: BoardBackend)
                       (implicit exec: ExecutionContext) 
                       extends Controller 
                       with PostReadValidator
 {
-  
+  /**
+   * Create asynchronous `Action` to send a Post operation to the backend
+   */
   def post = Action.async { request =>
     process_post_request(request)
   }
-  // Retrieve JSON
+  
+  /**
+   * Check the Post request body is in JSON format and pass it to `json_to_backend_post`
+   */
   private def process_post_request(request : Request[AnyContent])  : Future[Result] = {
     Logger.info(s"action: Board POST")
     request.body.asJson match {
@@ -45,7 +49,17 @@ class BulletinController @Inject()
     }
   }
   /**
-   * Validate JSON, convert it to a PostRequest, and send to the backend
+   * Get the message safely from a `Throwable`
+   */
+  private def getMessageFromThrowable(t: Throwable): String = {
+    if(null == t.getCause) {
+        t.toString
+     } else {
+        t.getCause.getMessage
+     }
+  }
+  /**
+   * Validate JSON, convert it to a PostRequest, and send it to the `BoardBackend` Post interface
    */
   private def json_to_backend_post(json : libs.json.JsValue)  : Future[Result] = {
     val promise: Promise[Result] = Promise[Result]()
@@ -53,7 +67,7 @@ class BulletinController @Inject()
         case s: JsSuccess[PostRequest] => { 
                                               backend.Post(s.get) onComplete {
                                                 case Success(p) => promise.success( Ok(s"$p") )
-                                                case Failure(e) => promise.success( BadRequest(s"${e.getCause.getMessage}") )
+                                                case Failure(e) => promise.success( BadRequest(s"${getMessageFromThrowable(e)}") )
                                               }
                                            }
         case e: JsError => promise.success(BadRequest(s"$e"))
@@ -61,10 +75,16 @@ class BulletinController @Inject()
     promise.future
   }
   
+  /**
+   * Create asynchronous `Action` to send a Get operation to the backend
+   */
   def get = Action.async { request =>
     process_get_request(request)
   }
   
+  /**
+   * Check the Get request body is in JSON format and pass it to `json_to_backend_get`
+   */
   private def process_get_request(request : Request[AnyContent])  : Future[Result] = {
     Logger.info(s"action: Board GET")
     request.body.asJson match {
@@ -72,7 +92,10 @@ class BulletinController @Inject()
       case None => Future { BadRequest(s"Bad request: not a json or json format error:\n${request.body.asRaw}\n") }
     }
   }
-  
+  /**
+   * Validate Get Body, which contains a JSON with some of the fields of the post.
+   * For now only the section, group and index are required, which is why this ad-hoc method is here
+   */
   private def jsonValidatePost(json : libs.json.JsValue): JsResult[Post] = {
     val section = (json \ "user_attributes" \ "section" ).asOpt[String]
     val group = (json \ "user_attributes" \ "group" ).asOpt[String]
@@ -84,6 +107,9 @@ class BulletinController @Inject()
     return JsError()
   }
   
+  /**
+   * Validate JSON, convert it to a Post, and send it to the `BoardBackend` Get interface
+   */
   private def json_to_backend_get(json : libs.json.JsValue)  : Future[Result] = {
     val promise: Promise[Result] = Promise[Result]()
     // check that the basic elements are there
@@ -92,7 +118,7 @@ class BulletinController @Inject()
       case s: JsSuccess[Post] => {
                                       backend.Get(s.get) onComplete {
                                                 case Success(p) => promise.success( Ok(s"$p") )
-                                                case Failure(e) => promise.success( BadRequest(s"${e.getCause.getMessage}") )
+                                                case Failure(e) => promise.success( BadRequest(s"${getMessageFromThrowable(e)}") )
                                       }
                                  }
       case e: JsError => promise.success( BadRequest(s"$e") )

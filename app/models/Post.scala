@@ -4,11 +4,14 @@ import javax.inject._
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
+// Classes used for reading and writing JSON structures of a Post
+
 case class UserAttributes(section: String, group: String, pk: String, signature: String)
 case class BoardAttributes(index: String, timestamp: String, hash: String, signature: String)
 case class PostRequest(message: String, user_attributes: UserAttributes)
 case class Post(message: String, user_attributes: UserAttributes, board_attributes: BoardAttributes)  
 
+// This trait enables easily reading a Json into a Post
 trait PostReadValidator {
   implicit val userAttributesReads: Reads[UserAttributes] = (
       (JsPath \ "section").read[String] and
@@ -36,6 +39,7 @@ trait PostReadValidator {
   )(Post.apply _)
 }
 
+// This trait enables easily writing a Post into a Json
 trait PostWriteValidator {
   implicit val userAttributesWrites: Writes[UserAttributes] = (
       (JsPath \ "section").write[String] and
