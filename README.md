@@ -12,7 +12,7 @@
 
 # Introduction
 
-This is the code repository for Agora Board, the Public Bulletin Board for the [Agora Voting](https://agoravoting.com/) project. Check also the other [Agora Voting](https://github.com/agoravoting) repositories.
+This is the code repository for Agora Board, the Public Bulletin Board for the [Agora Voting](https://agoravoting.com/) project. Check also the other Agora Voting [repositories](https://github.com/agoravoting).
 
 
 Any feedback on this documentation is highly welcome, including bugs, typos
@@ -22,13 +22,21 @@ or things you think should be included but aren't. You can use [github issues](h
 
 # Design
 
-![Error with design picture](public/architecture.png)
+![Error loading image](public/architecture.png)
+
+Agora Board has three different layers. The intermediate layer is a Generic Public Bulletin Board, which works as a purely functional typed immutable log. For that, it uses [FIWARE Orion Context Broker](https://github.com/telefonicaid/fiware-orion) to store and retrieve data, which is the lowest layer. The highest layer, the Elections Machine manages elections using the Bulletin Board. On the Elections Machine, the elections are modeled as a sequential and deterministic state machine. The state is built by reading, interpreting, and updating the Bulletin Board.
 
 # API documentation
+
+The lowest API is the FIWARE Orion Context Broker and you can find their API documentation on [their repository](https://github.com/telefonicaid/fiware-orion/).
+
+The Board and Elections Machine APIs are documented using Swagger and can be viewed building the project and going to [http://localhost:9000/docs/swagger-ui/index.html?url=/docs/swagger.json#!/routes/get_docs_swagger_json](http://localhost:9000/docs/swagger-ui/index.html?url=/docs/swagger.json#!/routes/get_docs_swagger_json)
 
 [Top](#top)
 
 # Build
+
+The reference distro for this project is Ubuntu 14.04 LTS. You must have scala, Fiware Orion and Lightbend Activator installed. In the future Ansible will be used for deployment.
 
 [Top](#top)
 
