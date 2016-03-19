@@ -1,0 +1,59 @@
+---
+- name: Update cache, install apt-transport-https ca-certificates
+  sudo: true
+  apt: state=present update_cache=yes
+  with_items:
+    - apt-transport-https
+    - ca-certificates
+- name: Add GPG key
+  sudo: true
+  shell: apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
+- name: Add docker repository
+  sudo: true
+  shell: echo 'deb https://apt.dockerproject.org/repo ubuntu-trusty main' > /etc/apt/sources.list.d/docker.list
+- name: Update cache, purge old repo lxc-docker
+  sudo: true
+  apt: state=absent name=lxc-docker update_cache=yes
+- name: Install linux image extras
+  sudo: true
+  apt: state=present name=linux-image-extra-virtual
+- name: Install Docker
+  sudo: true
+  apt: state=present name=docker-engine
+- name: Download docker-compose
+  sudo: true
+  get_url: url=https://github.com/docker/compose/releases/download/1.6.2/docker-compose-Linux-x86_64 dest=/usr/local/bin/docker-compose mode=0777
+- name: Git agora-board clone
+  sudo: true
+  git: repo=https://github.com/agoravoting/agora-board.git dest=/home/ubuntu/agora-board clone=yes update=yes
+- name: Java
+  sudo: true
+  shell: echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | /usr/bin/debconf-set-selections
+- name: Java PPA
+  sudo: true
+  shell: add-apt-repository -y ppa:webupd8team/java
+- name: apt-get update
+  sudo: true
+  shell: apt-get update
+- name: Java install
+  sudo: true
+  shell: apt-get install -y oracle-java8-installer
+- name: Java install (2)
+  sudo: true
+  shell: apt-get install -y oracle-java8-set-default
+- name: Download docker-compose
+  sudo: true
+  get_url: https://downloads.typesafe.com/typesafe-activator/1.3.7/typesafe-activator-1.3.7.zip dest=/home/ubuntu/typesafe-activator-1.3.7.zip
+- name: Unzip activator
+  sudo: true
+  shell: cd /home/ubuntu/ && unzip typesafe-activator-1.3.7.zip
+- name: Remove activator bat
+  sudo: true
+  shell: rm /home/ubuntu/typesafe-activator-1.3.7/activator.bat
+- name: Set activator path on bashrc
+  sudo: true
+  shell: echo 'export PATH=/home/ubuntu/activator-1.3.7:$PATH' >> /home/ubuntu/.bashrc && echo 'export PATH=/home/ubuntu/activator-1.3.7:$PATH' >> /home/vagrant/.bashrc
+- name: Start Docker for FIWARE Orion/Mongodb
+  sudo: true
+  git: cd /home/ubuntu/agora-board/conf && docker-compose up &
+ 
