@@ -38,7 +38,7 @@ The Board and Elections Machine APIs are documented using Swagger and can be vie
 
 The reference distro for this project is Ubuntu 14.04 LTS. You must have scala, Fiware Orion and Lightbend Activator installed. In the future Ansible will be used for deployment.
 
-First we need an active instance of fiware-orion. The fastest way of getting it is running this command from the conf folder:
+First we need an active instance of fiware-orion. The fastest way of getting it running is executing this command from the `conf` folder:
 
     sudo docker-compose up
 
