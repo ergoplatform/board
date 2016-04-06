@@ -12,7 +12,7 @@ class ApiSpecs @Inject() (cached: Cached) extends Controller {
 
   // The root package of your domain classes, play-swagger will automatically generate definitions when it encounters class references in this package.
   // In our case it would be "com.iheart", play-swagger supports multiple domain package names
-  val domainPackage = "YOUR.DOMAIN.PACKAGE"  
+  val domainPackage = "com.agora-board"  
   val secondDomainPackage = "YOUR.OtherDOMAIN.PACKAGE"
   private lazy val generator = SwaggerSpecGenerator(domainPackage, secondDomainPackage)
 

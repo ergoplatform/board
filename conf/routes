@@ -3,13 +3,38 @@
 # ~~~~
 
 ###
+#  definitions:
+#    contributors:
+#      type: object
+#      properties:
+#        id:
+#          type: integer
+#        id_str:
+#          type: string
+#        screen_name:
+#          type: string
+###
+
+###
 # summary: swagger definition
 # description: for swagger UI to consume
 ###
 GET   /docs/swagger.json         @controllers.swagger.ApiSpecs.specs
 ### NoDocs ###
 GET   /docs/swagger-ui/*file        controllers.Assets.at(path:String="/public/lib/swagger-ui", file:String)
-# An example PBB post
 
+###
+# summary: An example PBB post
+# description: for swagger UI to consume
+# parameters:
+#   - name: count
+#     in: query
+#     description: Count of media to return.
+#     type: integer
+#   - name: max_like_id
+#     in: query
+#     description: Return media liked before this id.
+#     type: integer
+###
 POST     /bulletin_post                    controllers.BulletinController.post
 POST     /bulletin_get                    controllers.BulletinController.get

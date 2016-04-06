@@ -38,6 +38,31 @@ The Board and Elections Machine APIs are documented using Swagger and can be vie
 
 The reference distro for this project is Ubuntu 14.04 LTS. You must have scala, Fiware Orion and Lightbend Activator installed. In the future Ansible will be used for deployment.
 
+First we need an active instance of fiware-orion. The fastest way of getting it is running this command from the conf folder:
+
+    sudo docker-compose up
+
+Now un the command from the project folder to get agora-board up and running:
+
+    activator run
+
+You can access the API help visiting [http://localhost:9000/docs/swagger-ui/index.html?url=/docs/swagger.json#!/routes/get_docs_swagger_json](http://localhost:9000/docs/swagger-ui/index.html?url=/docs/swagger.json#!/routes/get_docs_swagger_json) from a web browser.
+
+You can also post a message to the board:
+
+    (curl localhost:9000/bulletin_post -X POST -s -S -H "Content-Type: application/json" --header 'Accept: application/json' -d @-) <<EOF
+    {
+            "message": "m",
+            "user_attributes": 
+            {
+                "section": "s",
+                "group": "g",
+                "pk": "public_key",
+                "signature": "S"
+            }
+    }
+    EOF
+
 [Top](#top)
 
 # License

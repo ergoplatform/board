@@ -4,6 +4,8 @@ import play.api.libs.json._
 import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
 
+// Classes used for validating  and parsing JSON
+
 case class GetAttribute(name: String, _type: String, value: JsValue)
 case class GetContextElement(id: String, isPattern: String, _type: String, attributes: Seq[GetAttribute])
 case class GetStatusCode(code: String, reasonPhrase: String)
