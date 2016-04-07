@@ -1,23 +1,63 @@
 ---
-  swagger: "2.0"
+  swagger: "2.2"
   info: 
     title: "Agora-Board"
     description: "Public Bulletin Board with Fiware-Orion Backend"
-    version: "0.0.1"
+    version: "1.0.0"
   host: localhost:9000
   schemes:
     - "http"
-  consumes:
-    - application/json
   produces: 
     - application/json
+  consumes: 
+    - application/json
   definitions:
-    contributors:
+    PostRequest:
       type: object
       properties:
-        id:
+        message:
+          type: string
+        user_attributes:
+          $ref: "#/definitions/UserAttributes"
+    UserAttributes:
+      type: object
+      properties:
+        section:
+          type: string
+        group:
+          type: string
+        pk:
+          type: string
+        signature:
+          type: string
+    BoardAttributes:
+      type: object
+      properties:
+        index:
+          type: string
+        timestamp:
+          type: string
+        hash:
+          type: string
+        signature:
+          type: string
+    Post:
+      type: object
+      properties:
+        message:
+          type: string
+        user_attributes:
+          $ref: "#/definitions/UserAttributes"
+        board_attributes:
+          $ref: "#/definitions/BoardAttributes"
+    Error:
+      type: object
+      properties:
+        code:
           type: integer
-        id_str:
+          format: int32
+        message:
           type: string
-        screen_name:
+        fields:
           type: string
+    

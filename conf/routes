@@ -2,18 +2,6 @@
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 
-###
-#  definitions:
-#    contributors:
-#      type: object
-#      properties:
-#        id:
-#          type: integer
-#        id_str:
-#          type: string
-#        screen_name:
-#          type: string
-###
 
 ###
 # summary: swagger definition
@@ -27,14 +15,40 @@ GET   /docs/swagger-ui/*file        controllers.Assets.at(path:String="/public/l
 # summary: An example PBB post
 # description: for swagger UI to consume
 # parameters:
-#   - name: count
-#     in: query
-#     description: Count of media to return.
-#     type: integer
-#   - name: max_like_id
-#     in: query
-#     description: Return media liked before this id.
-#     type: integer
+#   - name: body
+#     in: body
+#     description: User attributes
+#     schema:
+#       $ref: '#/definitions/PostRequest'
+#     required: true
+# responses:
+#   400:
+#     description: Nothing good
+#   200:
+#     description: OK
+#     schema:
+#       $ref: '#/definitions/BoardAttributes'
 ###
 POST     /bulletin_post                    controllers.BulletinController.post
+
+###
+# summary: An example PBB get
+# description: for swagger UI to consume
+# parameters:
+#   - name: body
+#     in: body
+#     description: User attributes
+#     schema:
+#       $ref: '#/definitions/Post'
+#     required: true
+# responses:
+#   400:
+#     description: Nothing good
+#   200:
+#     description: OK
+#     schema:
+#       type: array
+#       items:
+#         $ref: '#/definitions/Post'
+###
 POST     /bulletin_get                    controllers.BulletinController.get

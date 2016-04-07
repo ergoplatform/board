@@ -30,6 +30,7 @@ class BulletinController @Inject()
                       (implicit exec: ExecutionContext) 
                       extends Controller 
                       with PostReadValidator
+                      with PostWriteValidator 
 {
   /**
    * Create asynchronous `Action` to send a Post operation to the backend
@@ -66,7 +67,7 @@ class BulletinController @Inject()
     json.validate[PostRequest] match {
         case s: JsSuccess[PostRequest] => { 
                                               backend.Post(s.get) onComplete {
-                                                case Success(p) => promise.success( Ok(s"$p") )
+                                                case Success(p) => promise.success( Ok(Json.prettyPrint(Json.toJson(p))) );
                                                 case Failure(e) => promise.success( BadRequest(s"${getMessageFromThrowable(e)}") )
                                               }
                                            }
@@ -117,7 +118,7 @@ class BulletinController @Inject()
     jsonValidatePost(json) match { 
       case s: JsSuccess[Post] => {
                                       backend.Get(s.get) onComplete {
-                                                case Success(p) => promise.success( Ok(s"$p") )
+                                                case Success(p) => promise.success( Ok(Json.prettyPrint(Json.toJson(p))) )
                                                 case Failure(e) => promise.success( BadRequest(s"${getMessageFromThrowable(e)}") )
                                       }
                                  }
