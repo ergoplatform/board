@@ -39,7 +39,7 @@ POST     /bulletin_post                    controllers.BulletinController.post
 #     in: body
 #     description: User attributes
 #     schema:
-#       $ref: '#/definitions/Post'
+#       $ref: '#/definitions/GetRequest'
 #     required: true
 # responses:
 #   400:

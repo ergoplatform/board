@@ -14,6 +14,9 @@
   definitions:
     PostRequest:
       type: object
+      required:
+        - message
+        - user_attributes
       properties:
         message:
           type: string
@@ -21,6 +24,11 @@
           $ref: "#/definitions/UserAttributes"
     UserAttributes:
       type: object
+      required:
+        - section
+        - group
+        - pk
+        - signature
       properties:
         section:
           type: string
@@ -32,6 +40,11 @@
           type: string
     BoardAttributes:
       type: object
+      required:
+        - index
+        - timestamp
+        - hash
+        - signature
       properties:
         index:
           type: string
@@ -43,6 +56,10 @@
           type: string
     Post:
       type: object
+      required:
+        - message
+        - user_attributes
+        - board_attributes
       properties:
         message:
           type: string
@@ -50,6 +67,19 @@
           $ref: "#/definitions/UserAttributes"
         board_attributes:
           $ref: "#/definitions/BoardAttributes"
+    GetRequest:
+      type: object
+      required:
+        - section
+        - group
+        - index
+      properties:
+        section:
+          type: string
+        group:
+          type: string
+        index:
+          type: string
     Error:
       type: object
       properties:

@@ -89,12 +89,12 @@ class FiwareBackend @Inject()
    }
    
   // Parse a `Get` into a JSON query that Fiware understands
-   private def fiwareGetQuery(post: models.Post): JsValue = {
+   private def fiwareGetQuery(post: models.GetRequest): JsValue = {
      Json.obj(
          "entities" -> Json.arr(Json.obj(
              "type" -> "Post",
              "isPattern" -> "false",
-             "id" -> s"${post.board_attributes.index}"
+             "id" -> s"${post.index}"
          ))
      )
    }
@@ -129,9 +129,9 @@ class FiwareBackend @Inject()
    }
    
   /**
-   * Implements the `Get` operation. Send the Post to the Fiware backend and interpret the result
+   * Implements the `Get` operation. Send the GetRequest to the Fiware backend and interpret the result
    */
-   override def Get(post: models.Post): Future[Seq[Post]] = {
+   override def Get(post: models.GetRequest): Future[Seq[Post]] = {
      val promise: Promise[Seq[Post]] = Promise[Seq[Post]]()
      // fill in the Get query
      val data = fiwareGetQuery(post)
@@ -140,7 +140,7 @@ class FiwareBackend @Inject()
      val futureResponse: Future[WSResponse] = ws.url("http://localhost:1026/v1/queryContext")
      .withHeaders("Content-Type" -> "application/json",
                  "Accept" -> "application/json",
-                 "Fiware-ServicePath" -> s"/${post.user_attributes.section}/${post.user_attributes.group}")
+                 "Fiware-ServicePath" -> s"/${post.section}/${post.group}")
      .post(data)
      // Interpret HTTP POST answer
      futureResponse onComplete {

@@ -10,6 +10,7 @@ case class UserAttributes(section: String, group: String, pk: String, signature:
 case class BoardAttributes(index: String, timestamp: String, hash: String, signature: String)
 case class PostRequest(message: String, user_attributes: UserAttributes)
 case class Post(message: String, user_attributes: UserAttributes, board_attributes: BoardAttributes)  
+case class GetRequest(section: String, group: String, index: String)
 
 // This trait enables easily reading a Json into a Post
 trait PostReadValidator {
@@ -37,6 +38,12 @@ trait PostReadValidator {
       (JsPath \ "user_attributes").read[UserAttributes] and
       (JsPath \ "board_attributes").read[BoardAttributes]
   )(Post.apply _)
+  
+  implicit val getRequestReads: Reads[GetRequest] = (
+      (JsPath \ "section").read[String] and
+      (JsPath \ "group").read[String] and
+      (JsPath \ "index").read[String]
+  )(GetRequest.apply _)
 }
 
 // This trait enables easily writing a Post into a Json
@@ -65,4 +72,10 @@ trait PostWriteValidator {
       (JsPath \ "user_attributes").write[UserAttributes] and
       (JsPath \ "board_attributes").write[BoardAttributes]
   )(unlift(Post.unapply))
+  
+  implicit val getRequestWrites: Writes[GetRequest] = (
+      (JsPath \ "section").write[String] and
+      (JsPath \ "group").write[String] and
+      (JsPath \ "index").write[String] 
+  )(unlift(GetRequest.unapply))
 }

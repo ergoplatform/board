@@ -115,8 +115,8 @@ class BulletinController @Inject()
     val promise: Promise[Result] = Promise[Result]()
     // check that the basic elements are there
     // instead of using json.validate[Post], as many elements are optional
-    jsonValidatePost(json) match { 
-      case s: JsSuccess[Post] => {
+    json.validate[GetRequest] match { 
+      case s: JsSuccess[GetRequest] => {
                                       backend.Get(s.get) onComplete {
                                                 case Success(p) => promise.success( Ok(Json.prettyPrint(Json.toJson(p))) )
                                                 case Failure(e) => promise.success( BadRequest(s"${getMessageFromThrowable(e)}") )

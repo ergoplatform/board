@@ -14,5 +14,5 @@ trait BoardBackend {
   /**
    * `Get` operation, query the board to get a set of posts
    */
-  def Get(request: Post): Future[Seq[Post]]
+  def Get(request: GetRequest): Future[Seq[Post]]
 }
