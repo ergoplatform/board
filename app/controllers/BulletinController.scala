@@ -53,7 +53,7 @@ class BulletinController @Inject()
    * Get the message safely from a `Throwable`
    */
   private def getMessageFromThrowable(t: Throwable): String = {
-    if(null == t.getCause) {
+    if (null == t.getCause) {
         t.toString
      } else {
         t.getCause.getMessage
@@ -102,7 +102,9 @@ class BulletinController @Inject()
     val group = (json \ "user_attributes" \ "group" ).asOpt[String]
     val index = (json \ "board_attributes" \ "index" ).asOpt[String]
     if(section.isDefined && group.isDefined && index.isDefined) {
-      val p = Post("",UserAttributes(section.get,group.get,"",""), BoardAttributes(index.get,"","",""))
+      val p = Post("",
+                   UserAttributes(section.get,group.get,"",""), 
+                   BoardAttributes(index.get,"","",models.Signature("","","")))
       return JsSuccess(p)
     }
     return JsError()

@@ -6,14 +6,21 @@ import play.api.libs.functional.syntax._
 
 // Classes used for reading and writing JSON structures of a Post
 
+case class Signature(signerPK: String, signaturePK: String, signature: String)
 case class UserAttributes(section: String, group: String, pk: String, signature: String)
-case class BoardAttributes(index: String, timestamp: String, hash: String, signature: String)
+case class BoardAttributes(index: String, timestamp: String, hash: String, signature: Signature)
 case class PostRequest(message: String, user_attributes: UserAttributes)
 case class Post(message: String, user_attributes: UserAttributes, board_attributes: BoardAttributes)  
 case class GetRequest(section: String, group: String, index: String)
 
 // This trait enables easily reading a Json into a Post
 trait PostReadValidator {
+  implicit val signatureReads: Reads[Signature] = (
+      (JsPath \ "signerPK").read[String] and
+      (JsPath \ "signaturePK").read[String] and
+      (JsPath \ "signature").read[String]
+  )(Signature.apply _)
+  
   implicit val userAttributesReads: Reads[UserAttributes] = (
       (JsPath \ "section").read[String] and
       (JsPath \ "group").read[String] and
@@ -30,7 +37,7 @@ trait PostReadValidator {
       (JsPath \ "index").read[String] and
       (JsPath \ "timestamp").read[String] and
       (JsPath \ "hash").read[String] and
-      (JsPath \ "signature").read[String] 
+      (JsPath \ "signature").read[Signature] 
   )(BoardAttributes.apply _)
   
   implicit val postReads: Reads[Post] = (
@@ -48,6 +55,12 @@ trait PostReadValidator {
 
 // This trait enables easily writing a Post into a Json
 trait PostWriteValidator {
+  implicit val signatureWrites: Writes[Signature] = (
+      (JsPath \ "signerPK").write[String] and
+      (JsPath \ "signaturePK").write[String] and
+      (JsPath \ "signature").write[String]
+  )(unlift(Signature.unapply))
+  
   implicit val userAttributesWrites: Writes[UserAttributes] = (
       (JsPath \ "section").write[String] and
       (JsPath \ "group").write[String] and
@@ -64,7 +77,7 @@ trait PostWriteValidator {
       (JsPath \ "index").write[String] and
       (JsPath \ "timestamp").write[String] and
       (JsPath \ "hash").write[String] and
-      (JsPath \ "signature").write[String] 
+      (JsPath \ "signature").write[Signature] 
   )(unlift(BoardAttributes.unapply))
   
   implicit val postWrites: Writes[Post] = (
