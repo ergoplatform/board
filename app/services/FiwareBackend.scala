@@ -36,6 +36,8 @@ import java.security.KeyFactory;
 import java.util.Base64
 import java.nio.charset.StandardCharsets
 import ch.bfh.unicrypt.math.algebra.dualistic.classes.ZModElement;
+import ch.bfh.unicrypt.math.algebra.dualistic.classes.ZModPrime;
+import java.math.BigInteger;
 
 import play.api.libs.ws._
 import play.api.libs.json._
@@ -135,7 +137,7 @@ class FiwareBackend @Inject()
 		 
      Logger.info(s"g:${g.toString()}")
      Logger.info(s"g_g:${g_q.toString()}")
-		 val signature = schnorr.sign(privateKey, message)
+		 val signature : Pair = schnorr.sign(privateKey, message)
      Logger.info(s"signature:${signature.convertToString()}")
 		 Logger.info(s"Signature: ${signature}")
      
@@ -164,10 +166,17 @@ class FiwareBackend @Inject()
        // signature PK reconstruction: GStarModElement
        val publicKey2 = g_q2.getElementFrom(publicKey.convertToString()).asInstanceOf[GStarModElement]
        // signature reconstruction: Pair[ZModElement]
-  		 val s1 = signature.getFirst().getSet()
-  		 val s2 = signature.getSecond().getValue().toString()
-       val signature2 = Pair.getInstance(signature.getFirst(),//g_q2.getElementFrom(s1).asInstanceOf[ZModElement], 
-                                      signature.getSecond())//g_q2.getElementFrom(s2).asInstanceOf[ZModElement])
+  		 // first reconstruct the group
+  		 val bigModS = signature.getFirst().getSet().getZModOrder().getModulus().toString()
+  		 val bigMod = new BigInteger(bigModS)
+  		 Logger.info(s"bigMod ${bigMod}")
+  		 val zmod = ZModPrime.getInstance(bigMod)
+  		 // then the elements (they share the same zmod group)
+  		 val zFirst = zmod.getElement(signature.getFirst().convertToBigInteger())
+  		 val zSecond = zmod.getElement(signature.getSecond().convertToBigInteger())
+  		 // the signature is the pair of elements 
+  		 val signature2 = Pair.getInstance(zFirst,
+                                      zSecond)
        // Schnorr signature scheme
        val schnorr2 = SchnorrSignatureScheme.getInstance(StringMonoid.getInstance(Alphabet.BASE64), g2)
        // Verify signature
