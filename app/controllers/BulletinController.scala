@@ -104,7 +104,7 @@ class BulletinController @Inject()
     if(section.isDefined && group.isDefined && index.isDefined) {
       val p = Post("",
                    UserAttributes(section.get,group.get,"",""), 
-                   BoardAttributes(index.get,"","",models.Signature("","","")))
+                   BoardAttributes(index.get,"","",None))
       return JsSuccess(p)
     }
     return JsError()

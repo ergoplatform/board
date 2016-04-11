@@ -67,6 +67,12 @@ class FiwareBackend @Inject()
                      with PostReadValidator 
                      with FiwareQueryReadValidator 
 {  
+  
+  // Use DSA keys
+  private val keyGen = KeyPairGenerator.getInstance("DSA")
+  keyGen.initialize(2048)
+  // public/private key pair
+  private val keyPair = keyGen.genKeyPair()
   // Atomic post index counter
   private val index = new AtomicLong(0)
   
@@ -99,105 +105,23 @@ class FiwareBackend @Inject()
                          promise.failure(new Error(s"${response.json}"))
     }
   }
-  
-  /**
-   * Implements the `Post` operation. Send the Post to the Fiware backend and interpret the result
-   */
-  
-   def  signString(strMessage: String) : models.Signature  = {
-     // Use DSA keys
-     val keyGen = KeyPairGenerator.getInstance("DSA")
-     keyGen.initialize(2048)
-     // public/private key pair
-     val keypair = keyGen.genKeyPair()
-     // private key
-     val dsaPrivateKey = keypair.getPrivate() match {
-       case r: DSAPrivateKey => r
-       case _ => throw new ClassCastException
-     }
-     // public key
-     val dsaPublicKey = keypair.getPublic match {
-       case r: DSAPublicKey => r
-       case _ => throw new ClassCastException
-     }
-     // group
-     val g_q = GStarModPrime.getInstance(dsaPrivateKey.getParams().getP(), dsaPrivateKey.getParams().getQ())
-     val g = g_q.getElement(dsaPrivateKey.getParams().getG())
-     // Schnorr signature scheme
-     val schnorr = SchnorrSignatureScheme.getInstance(StringMonoid.getInstance(Alphabet.BASE64), g);
-     // Encode UTF-8 string to Base64
-     val base64message = Base64.getEncoder.encodeToString(strMessage.getBytes(StandardCharsets.UTF_8))
-     // message in Element format
-     val message = schnorr.getMessageSpace().getElementFrom(base64message)
-     
-		 val keyPair = schnorr.getKeyPairGenerator().generateKeyPair()
-		 val privateKey = keyPair.getFirst()
-		 val publicKey = keyPair.getSecond()
-     Logger.info(s"g:${publicKey.convertToString()}")
-		 
-     Logger.info(s"g:${g.toString()}")
-     Logger.info(s"g_g:${g_q.toString()}")
-		 val signature : Pair = schnorr.sign(privateKey, message)
-     Logger.info(s"signature:${signature.convertToString()}")
-		 Logger.info(s"Signature: ${signature}")
-     
-		 val result = schnorr.verify(publicKey, message, signature)
-		 Logger.info(s"1 Verification ${result}")
-
-		 val falseResult = schnorr.verify(publicKey, message, signature.invert())
-		 Logger.info(s"2 Verification inverse test: ${falseResult}")
-		 
-		 // Let's verify the signature using only the signer public key
-     {
-  		 
-  		 // signer PK reconstruction
-  		 val dsaParams : DSAParams = dsaPublicKey.getParams()
-  		 val dsaPublicKeySpec : DSAPublicKeySpec = new DSAPublicKeySpec(dsaPublicKey.getY(), 
-  		                                            dsaParams.getP(), 
-  		                                            dsaParams.getQ(), 
-  		                                            dsaParams.getG())
-       val keyFactory : KeyFactory = KeyFactory.getInstance("DSA")
-       val dsaPublicKey2  = keyFactory.generatePublic(dsaPublicKeySpec).asInstanceOf[DSAPublicKey]
-                                   
-       // group
-       val g_q2 = GStarModPrime.getInstance(dsaPublicKey2.getParams().getP(), dsaPublicKey2.getParams().getQ())
-       val g2 = g_q2.getElement(dsaPublicKey2.getParams().getG())
-       
-       // signature PK reconstruction: GStarModElement
-       val publicKey2 = g_q2.getElementFrom(publicKey.convertToString()).asInstanceOf[GStarModElement]
-       // signature reconstruction: Pair[ZModElement]
-  		 // first reconstruct the group
-  		 val bigModS = signature.getFirst().getSet().getZModOrder().getModulus().toString()
-  		 val bigMod = new BigInteger(bigModS)
-  		 Logger.info(s"bigMod ${bigMod}")
-  		 val zmod = ZModPrime.getInstance(bigMod)
-  		 // then the elements (they share the same zmod group)
-  		 val zFirst = zmod.getElement(signature.getFirst().convertToBigInteger())
-  		 val zSecond = zmod.getElement(signature.getSecond().convertToBigInteger())
-  		 // the signature is the pair of elements 
-  		 val signature2 = Pair.getInstance(zFirst,
-                                      zSecond)
-       // Schnorr signature scheme
-       val schnorr2 = SchnorrSignatureScheme.getInstance(StringMonoid.getInstance(Alphabet.BASE64), g2)
-       // Verify signature
-  		 val result2 = schnorr2.verify(publicKey2, message, signature2)
-  		 Logger.info(s"3 Verification ${result2}  ${signature2.getClass} ${signature2.getFirst().getClass}  ${signature2.getSecond().getClass}")
-  		 Logger.info(s"4 publicKey ${publicKey2.getClass}")
-     }
-		 models.Signature(dsaPublicKey.toString(), publicKey.convertToString(), signature.convertToString())
-   }
    
    def signPost(post: models.Post): models.Post = {
      val message = Json.prettyPrint(Json.toJson(post))
-     signString(message)
+     val signature = SchnorrSigningDevice.signString(keyPair, message)
+     Logger.info(s"Verification ${signature.verifyString(message)}")
+     val signatureStr = signature.toSignatureString()
      models.Post(post.message, 
                  post.user_attributes, 
                  models.BoardAttributes(post.board_attributes.index, 
                                        post.board_attributes.timestamp, 
                                        post.board_attributes.hash, 
-                                       signString(message)))
+                                       Some(signatureStr)))
    }
-   
+  
+  /**
+   * Implements the `Post` operation. Send the Post to the Fiware backend and interpret the result
+   */
    override def Post(request: PostRequest): Future[BoardAttributes] = {
      val promise: Promise[BoardAttributes] = Promise[BoardAttributes]()
      // hash
@@ -212,7 +136,7 @@ class FiwareBackend @Inject()
      var postNotSigned = models.Post(request.message, 
                            request.user_attributes, 
                            // add board attributes, including index and timestamp
-                           BoardAttributes(s"${index.getAndIncrement()}",s"${System.currentTimeMillis()}",hash,models.Signature("","","")))
+                           BoardAttributes(s"${index.getAndIncrement()}",s"${System.currentTimeMillis()}",hash,None))
      val post = signPost(postNotSigned)
      val data = fiwarePostQuery(post)
      Logger.info(s"POST data:\n$data\n")
