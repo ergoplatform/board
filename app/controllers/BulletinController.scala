@@ -97,18 +97,18 @@ class BulletinController @Inject()
    * Validate Get Body, which contains a JSON with some of the fields of the post.
    * For now only the section, group and index are required, which is why this ad-hoc method is here
    */
-  private def jsonValidatePost(json : libs.json.JsValue): JsResult[Post] = {
+  /*private def jsonValidatePost(json : libs.json.JsValue): JsResult[Post] = {
     val section = (json \ "user_attributes" \ "section" ).asOpt[String]
     val group = (json \ "user_attributes" \ "group" ).asOpt[String]
     val index = (json \ "board_attributes" \ "index" ).asOpt[String]
     if(section.isDefined && group.isDefined && index.isDefined) {
       val p = Post("",
-                   UserAttributes(section.get,group.get,"",""), 
+                   UserAttributes(section.get,group.get,"",None), 
                    BoardAttributes(index.get,"","",None))
       return JsSuccess(p)
     }
     return JsError()
-  }
+  }*/
   
   /**
    * Validate JSON, convert it to a Post, and send it to the `BoardBackend` Get interface

@@ -12,6 +12,48 @@
   consumes: 
     - application/json
   definitions:
+    DSAPublicKeyString:
+      type: object
+      required:
+        - y
+        - p
+        - q
+        - g
+      properties:
+        y:
+          type: string
+        p:
+          type: string
+        q:
+          type: string
+        g:
+          type: string
+    SignatureElements:
+      type: object
+      required:
+        - first
+        - second
+        - zmod
+      properties:
+        first:
+          type: string
+        second:
+          type: string
+        zmod:
+          type: string
+    SignatureString:
+      type: object
+      required:
+        - signerPK
+        - signaturePK
+        - signature
+      properties:
+        signerPK:
+          $ref: "#/definitions/DSAPublicKeyString"
+        signaturePK:
+          type: string
+        signature:
+          $ref: "#/definitions/SignatureElements"
     PostRequest:
       type: object
       required:
@@ -28,7 +70,6 @@
         - section
         - group
         - pk
-        - signature
       properties:
         section:
           type: string
@@ -37,14 +78,13 @@
         pk:
           type: string
         signature:
-          type: string
+          $ref: "#/definitions/SignatureString"
     BoardAttributes:
       type: object
       required:
         - index
         - timestamp
         - hash
-        - signature
       properties:
         index:
           type: string
@@ -53,7 +93,7 @@
         hash:
           type: string
         signature:
-          type: string
+          $ref: "#/definitions/SignatureString"
     Post:
       type: object
       required:

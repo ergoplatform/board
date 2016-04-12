@@ -100,6 +100,9 @@ class FiwareBackend @Inject()
   private def fiwareParsePostAnswer(response: WSResponse, promise: Promise[BoardAttributes], post: models.Post) {
     response.json.validate[SuccessfulGetPost] match {
       case s: JsSuccess[SuccessfulGetPost] => Logger.info(s"Future success:\n${response.json}\n")
+                                              // commit the last post to the hash service
+                                              HashService.commit(post)
+                                              index.incrementAndGet()
                                               promise.success(post.board_attributes)
       case e: JsError => Logger.info(s"Future failure:\n${response.json}\n")
                          promise.failure(new Error(s"${response.json}"))
@@ -107,9 +110,9 @@ class FiwareBackend @Inject()
   }
    
    def signPost(post: models.Post): models.Post = {
-     val message = Json.prettyPrint(Json.toJson(post))
+     val message = new Base64Message(Json.toJson(post))
      val signature = SchnorrSigningDevice.signString(keyPair, message)
-     Logger.info(s"Verification ${signature.verifyString(message)}")
+     Logger.info(s"Post Verification ${signature.verify(message)}")
      val signatureStr = signature.toSignatureString()
      models.Post(post.message, 
                  post.user_attributes, 
@@ -118,41 +121,74 @@ class FiwareBackend @Inject()
                                        post.board_attributes.hash, 
                                        Some(signatureStr)))
    }
+   
+   private def verifyPostRequest(request: PostRequest): Boolean = {
+     request.user_attributes.signature match {
+       case None => false
+       case Some(signatureStr) => // strip the signature from the Post Request
+                                  val leanRequest = PostRequest(request.message,
+                                                                 UserAttributes(
+                                                                     request.user_attributes.group,
+                                                                     request.user_attributes.section,
+                                                                     request.user_attributes.pk,
+                                                                     None))
+                                  val base64message = new Base64Message(Json.toJson(leanRequest))
+                                  val signature = DSASignature.fromSignatureString(signatureStr)
+                                  signature.verify(base64message)
+     }
+   }
   
   /**
    * Implements the `Post` operation. Send the Post to the Fiware backend and interpret the result
    */
    override def Post(request: PostRequest): Future[BoardAttributes] = {
      val promise: Promise[BoardAttributes] = Promise[BoardAttributes]()
-     // hash
-     val hashAlgorithm: HashAlgorithm = HashAlgorithm.SHA512
-     val hashMethod = HashMethod.getInstance(hashAlgorithm)
-     val converter = StringToByteArray.getInstance()
-     val byteArray = converter.convert("holacaracola")
-     val byteHash = hashAlgorithm.getHashValue(byteArray)
-     val stringConverter = ByteArrayToString.getInstance()
-     val hash = stringConverter.convert(byteHash)
+     Logger.info(s"PostRequest Verification ${verifyPostRequest(request)}")
+     // index and timestamp
+     val postIndex = index.get()
+     val timeStamp = System.currentTimeMillis()
      // fill in the Post object
-     var postNotSigned = models.Post(request.message, 
+     val postNoHash = models.Post(request.message, 
                            request.user_attributes, 
                            // add board attributes, including index and timestamp
-                           BoardAttributes(s"${index.getAndIncrement()}",s"${System.currentTimeMillis()}",hash,None))
-     val post = signPost(postNotSigned)
-     val data = fiwarePostQuery(post)
-     Logger.info(s"POST data:\n$data\n")
-     // send HTTP POST message to Fiware-Orion backend
-     val futureResponse: Future[WSResponse] = ws.url("http://localhost:1026/v1/updateContext")
-     .withHeaders("Content-Type" -> "application/json",
-                 "Accept" -> "application/json",
-                 "Fiware-ServicePath" -> s"/${post.user_attributes.section}/${post.user_attributes.group}")
-     .post(data)
-     // Interpret HTTP POST answer
-     futureResponse onComplete {
-       case Success(response) => // this resolves the promise with either success or failure
-                                  fiwareParsePostAnswer(response, promise, post) 
-       case Failure(e) => Logger.info(s"Future failure:\n$e\n")
-                         promise.failure(e)
+                           BoardAttributes(s"$postIndex",s"$timeStamp","",None))
+     // get hash                      
+     val hashFuture = HashService.createHash(postNoHash)
+     
+     hashFuture onFailure {
+       case error => Logger.info(s"hashing error:\n$error\n")
+                     promise.failure(new Error(s"Hashing error : $error"))
      }
+     
+     hashFuture onSuccess {
+       case hash =>  
+         val postNotSigned = models.Post(request.message, 
+         request.user_attributes, 
+         // add hash
+         BoardAttributes(
+             s"$postIndex",
+             s"$timeStamp",
+             hash.toString(),
+             None))
+         // add signature
+         val post = signPost(postNotSigned)
+         val data = fiwarePostQuery(post)
+         Logger.info(s"POST data:\n$data\n")
+         // send HTTP POST message to Fiware-Orion backend
+         val futureResponse: Future[WSResponse] = ws.url("http://localhost:1026/v1/updateContext")
+         .withHeaders("Content-Type" -> "application/json",
+                     "Accept" -> "application/json",
+                     "Fiware-ServicePath" -> s"/${post.user_attributes.section}/${post.user_attributes.group}")
+         .post(data)
+         // Interpret HTTP POST answer
+         futureResponse onComplete {
+           case Success(response) => // this resolves the promise with either success or failure
+                                      fiwareParsePostAnswer(response, promise, post)
+           case Failure(e) => Logger.info(s"Future failure:\n$e\n")
+                             promise.failure(e)
+         }
+     }
+     
      promise.future
    }
    

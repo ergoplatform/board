@@ -33,14 +33,15 @@ import java.security.spec.DSAPrivateKeySpec;
 import java.security.spec.DSAPublicKeySpec;
 import java.security.spec.KeySpec;
 import java.security.KeyFactory;
-import java.util.Base64
+//import java.util.Base64
 import java.nio.charset.StandardCharsets
 import ch.bfh.unicrypt.math.algebra.dualistic.classes.ZModElement;
 import ch.bfh.unicrypt.math.algebra.dualistic.classes.ZModPrime;
 import java.math.BigInteger;
+import play.api.libs.json._
 import models._;
 
-case class DSASignature (signerPK: DSAPublicKey, signaturePK: GStarModElement, signature: Pair) {
+case class DSASignature (signerPK: DSAPublicKey, signaturePK: GStarModElement, signature: Pair) extends PostWriteValidator {
   def toSignatureString(): SignatureString = {
     new models.SignatureString(DSAPublicKeyString(signerPK.getY().toString(),
 		                                             signerPK.getParams().getP().toString(),
@@ -50,27 +51,24 @@ case class DSASignature (signerPK: DSAPublicKey, signaturePK: GStarModElement, s
 		                       SignatureElements(signature.getFirst().convertToBigInteger().toString(), 
 		                                         signature.getSecond().convertToBigInteger().toString(),
 		                                         signature.getFirst().getSet().getZModOrder().getModulus().toString()))
-  }
+  }  
   
-  def verifyString(message: String) : Boolean = {
+  def verify(base64message: Base64Message) : Boolean = {
     // group
     val g_q = GStarModPrime.getInstance(signerPK.getParams().getP(), signerPK.getParams().getQ())
     val g = g_q.getElement(signerPK.getParams().getG())
     // Schnorr signature scheme
     val schnorr = SchnorrSignatureScheme.getInstance(StringMonoid.getInstance(Alphabet.BASE64), g)
-    // Encode UTF-8 string to Base64
-    val base64message = Base64.getEncoder.encodeToString(message.getBytes(StandardCharsets.UTF_8))
     // message in Element format
-    val messageElement = schnorr.getMessageSpace().getElementFrom(base64message)
+    val messageElement = schnorr.getMessageSpace().getElementFrom(base64message.toString())
     // verify
     schnorr.verify(signaturePK, messageElement, signature).isTrue()
   }
-  
 }
 
 object SchnorrSigningDevice {
   
-  def  signString(keypair: KeyPair, strMessage: String) : DSASignature = {
+  def  signString(keypair: KeyPair, base64message: Base64Message) : DSASignature = {
      // private key
      val dsaPrivateKey : DSAPrivateKey = keypair.getPrivate().asInstanceOf[DSAPrivateKey]
      val dsaPublicKey : DSAPublicKey = keypair.getPublic().asInstanceOf[DSAPublicKey]
@@ -81,15 +79,13 @@ object SchnorrSigningDevice {
      val g = g_q.getElement(dsaPrivateKey.getParams().getG())
      // Schnorr signature scheme
      val schnorr = SchnorrSignatureScheme.getInstance(StringMonoid.getInstance(Alphabet.BASE64), g);
-     // Encode UTF-8 string to Base64
-     val base64message = Base64.getEncoder.encodeToString(strMessage.getBytes(StandardCharsets.UTF_8))
      // message in Element format
-     val message = schnorr.getMessageSpace().getElementFrom(base64message)
+     val message = schnorr.getMessageSpace().getElementFrom(base64message.toString())
      // signature keys
 		 val keyPair = schnorr.getKeyPairGenerator().generateKeyPair()
 		 val privateKey = keyPair.getFirst()
 		 val publicKey = keyPair.getSecond()
-		 
+		 // signature
 		 val signature : Pair = schnorr.sign(privateKey, message)
 		 
 		 new DSASignature(dsaPublicKey, publicKey.asInstanceOf[GStarModElement], signature)

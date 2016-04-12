@@ -9,7 +9,7 @@ import play.api.libs.functional.syntax._
 case class DSAPublicKeyString(y: String, p: String, q: String, g: String)
 case class SignatureElements(first: String, second: String, zmod: String)
 case class SignatureString(signerPK: DSAPublicKeyString, signaturePK: String, signature: SignatureElements)
-case class UserAttributes(section: String, group: String, pk: String, signature: String)
+case class UserAttributes(section: String, group: String, pk: String, signature: Option[SignatureString] = None)
 case class BoardAttributes(index: String, timestamp: String, hash: String, signature: Option[SignatureString] = None)
 case class PostRequest(message: String, user_attributes: UserAttributes)
 case class Post(message: String, user_attributes: UserAttributes, board_attributes: BoardAttributes)  
@@ -40,7 +40,7 @@ trait PostReadValidator {
       (JsPath \ "section").read[String] and
       (JsPath \ "group").read[String] and
       (JsPath \ "pk").read[String] and
-      (JsPath \ "signature").read[String] 
+      (JsPath \ "signature").readNullable[SignatureString] 
   )(UserAttributes.apply _)
   
   implicit val postRequestReads: Reads[PostRequest] = (
@@ -93,7 +93,7 @@ trait PostWriteValidator {
       (JsPath \ "section").write[String] and
       (JsPath \ "group").write[String] and
       (JsPath \ "pk").write[String] and
-      (JsPath \ "signature").write[String] 
+      (JsPath \ "signature").writeNullable[SignatureString] 
   )(unlift(UserAttributes.unapply))
   
   implicit val postRequestWrites: Writes[PostRequest] = (
