@@ -30,7 +30,7 @@ class Hash (message: Base64Message) {
   }
 }
 
-object HashService extends PostWriteValidator {
+object HashService extends JSONWriteValidator {
   private var postMap = Map[Int, Tuple2[Base64Message,Promise[Hash]]]()
   private var lastCommitedIndex: Int = -1
   private var lastPostB64: Base64Message = new Base64Message(JsNull)

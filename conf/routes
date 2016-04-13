@@ -52,3 +52,25 @@ POST     /bulletin_post                    controllers.BulletinController.post
 #         $ref: '#/definitions/Post'
 ###
 POST     /bulletin_get                    controllers.BulletinController.get
+
+###
+# summary: An example PBB subscribe
+# description: for swagger UI to consume
+# parameters:
+#   - name: body
+#     in: body
+#     description: User attributes
+#     schema:
+#       $ref: '#/definitions/SubscribeRequest'
+#     required: true
+# responses:
+#   400:
+#     description: Nothing good
+#   200:
+#     description: OK
+#     schema:
+#       type: array
+#       items:
+#         $ref: '#/definitions/SuccessfulSubscribe'
+###
+POST     /bulletin_subscribe                    controllers.BulletinController.subscribe

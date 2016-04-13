@@ -40,7 +40,7 @@ import java.math.BigInteger;
 import play.api.libs.json._
 import models._;
 
-case class DSASignature (signerPK: DSAPublicKey, signaturePK: GStarModElement, signature: Pair) extends PostWriteValidator {
+case class DSASignature (signerPK: DSAPublicKey, signaturePK: GStarModElement, signature: Pair) extends JSONWriteValidator {
   def toSignatureString(): SignatureString = {
     new models.SignatureString(DSAPublicKeyString(signerPK.getY().toString(),
 		                                             signerPK.getParams().getP().toString(),

@@ -15,4 +15,8 @@ trait BoardBackend {
    * `Get` operation, query the board to get a set of posts
    */
   def Get(request: GetRequest): Future[Seq[Post]]
+  /**
+   * `Get` operation, query the board to get a set of posts
+   */
+  def Subscribe(request: SubscribeRequest): Future[SuccessfulSubscribe]
 }

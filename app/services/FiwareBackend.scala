@@ -63,8 +63,8 @@ case class CryptoSettings(group: GStarModSafePrime, generator: Element[_])
 class FiwareBackend @Inject() 
                      (ws: WSClient) 
                      extends BoardBackend 
-                     with PostWriteValidator 
-                     with PostReadValidator 
+                     with JSONWriteValidator 
+                     with JSONReadValidator 
                      with FiwareQueryReadValidator 
 {  
   
@@ -257,4 +257,57 @@ class FiwareBackend @Inject()
      }     
      promise.future
    }
+  
+  // Parse a `Subscribe` into a JSON query that Fiware understands
+   private def fiwareSubscribeQuery(post: models.SubscribeRequest): JsValue = {
+     Json.obj(
+         "entities" -> Json.arr(Json.obj(
+             "type" -> "Post",
+             "isPattern" -> "true",
+             "id" -> "*"
+         )),
+         "attributes" -> Json.arr(),
+         "reference" -> post.reference,
+         "duration" -> post.duration,
+         "notifyConditions" -> Json.arr(Json.obj(
+             "type" -> "ONCHANGE"
+         )),
+         "throttling" -> post.throttling
+     )
+   }
+   
+   
+  /**
+   * Interpret the answer to a Subscribe message sent to Fiware-Orion.
+   * If successful, it will resolve the promise with the list of Post messages
+   */
+   private def fiwareParseSubscribeAnswer(response: WSResponse, promise: Promise[SuccessfulSubscribe]) {
+      response.json.validate[SuccessfulSubscribe] match {
+        case s: JsSuccess[SuccessfulSubscribe] => promise.success(s.get)
+        // The Fiware-Orion backend returned an error message
+        case e: JsError => Logger.info(s"Future failure:\n${response.json}\n")
+                           promise.failure(new Error(s"${response.json}"))
+      }
+     
+   }
+   
+  def Subscribe(request: SubscribeRequest): Future[SuccessfulSubscribe] = {
+    val promise = Promise[SuccessfulSubscribe]()
+    // fill in the Subscribe query
+    val data = fiwareSubscribeQuery(request)
+    Logger.info(s"GET data:\n$data\n") 
+     // send HTTP POST message to Fiware-Orion backend
+     val futureResponse: Future[WSResponse] = ws.url("http://localhost:1026/v1/subscribeContext")
+     .withHeaders("Content-Type" -> "application/json",
+                 "Accept" -> "application/json",
+                 "Fiware-ServicePath" -> s"/${request.section}/${request.group}")
+     .post(data)
+     // Interpret HTTP POST answer
+     futureResponse onComplete {
+       case Success(response) => fiwareParseSubscribeAnswer(response, promise)
+       case Failure(e) => Logger.info(s"Future failure:\n$e\n")
+                         promise.failure(e)
+     }
+    promise.future
+  }
 }

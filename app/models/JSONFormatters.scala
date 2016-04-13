@@ -14,9 +14,18 @@ case class BoardAttributes(index: String, timestamp: String, hash: String, signa
 case class PostRequest(message: String, user_attributes: UserAttributes)
 case class Post(message: String, user_attributes: UserAttributes, board_attributes: BoardAttributes)  
 case class GetRequest(section: String, group: String, index: String)
+case class SubscribeRequest(section: String, group: String, reference: String, duration: String, throttling: String)
 
 // This trait enables easily reading a Json into a Post
-trait PostReadValidator {
+trait JSONReadValidator {
+  implicit val subscribeRequestReads: Reads[SubscribeRequest] = (
+      (JsPath \ "section").read[String] and
+      (JsPath \ "group").read[String] and
+      (JsPath \ "reference").read[String] and
+      (JsPath \ "duration").read[String] and
+      (JsPath \ "throttling").read[String] 
+  )(SubscribeRequest.apply _)
+  
   implicit val dsaPublicKeyStringReads: Reads[DSAPublicKeyString] = (
       (JsPath \ "y").read[String] and
       (JsPath \ "p").read[String] and
@@ -69,7 +78,7 @@ trait PostReadValidator {
 }
 
 // This trait enables easily writing a Post into a Json
-trait PostWriteValidator {
+trait JSONWriteValidator {
   implicit val dsaPublicKeyStringWrites: Writes[DSAPublicKeyString] = (
       (JsPath \ "y").write[String] and
       (JsPath \ "p").write[String] and
@@ -119,4 +128,12 @@ trait PostWriteValidator {
       (JsPath \ "group").write[String] and
       (JsPath \ "index").write[String] 
   )(unlift(GetRequest.unapply))
+  
+  implicit val subscribeRequestWrites: Writes[SubscribeRequest] = (
+      (JsPath \ "section").write[String] and
+      (JsPath \ "group").write[String] and
+      (JsPath \ "reference").write[String] and
+      (JsPath \ "duration").write[String] and
+      (JsPath \ "throttling").write[String] 
+  )(unlift(SubscribeRequest.unapply))
 }

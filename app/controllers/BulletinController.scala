@@ -29,8 +29,9 @@ class BulletinController @Inject()
                       (backend: BoardBackend)
                       (implicit exec: ExecutionContext) 
                       extends Controller 
-                      with PostReadValidator
-                      with PostWriteValidator 
+                      with JSONReadValidator
+                      with JSONWriteValidator 
+                      with FiwareQueryWriteValidator
 {
   /**
    * Create asynchronous `Action` to send a Post operation to the backend
@@ -104,6 +105,42 @@ class BulletinController @Inject()
     json.validate[GetRequest] match { 
       case s: JsSuccess[GetRequest] => {
                                       backend.Get(s.get) onComplete {
+                                                case Success(p) => promise.success( Ok(Json.prettyPrint(Json.toJson(p))) )
+                                                case Failure(e) => promise.success( BadRequest(s"${getMessageFromThrowable(e)}") )
+                                      }
+                                 }
+      case e: JsError => promise.success( BadRequest(s"$e") )
+    }
+    promise.future
+  }
+  
+  /**
+   * Create asynchronous `Action` to send a Post operation to the backend
+   */
+  def subscribe = Action.async { request =>
+    process_subscribe_request(request)
+  }
+  
+  
+  /**
+   * Check the subscribe request body is in JSON format and pass it to `json_to_backend_get`
+   */
+  private def process_subscribe_request(request : Request[AnyContent])  : Future[Result] = {
+    Logger.info(s"action: Board SUBSCRIBE")
+    request.body.asJson match {
+      case Some(json_data) => json_to_backend_subscribe(json_data)
+      case None => Future { BadRequest(s"Bad request: not a json or json format error:\n${request.body.asRaw}\n") }
+    }
+  }
+  
+  /**
+   * Validate JSON, convert it to a Post, and send it to the `BoardBackend` Get interface
+   */
+  private def json_to_backend_subscribe(json : libs.json.JsValue)  : Future[Result] = {
+    val promise: Promise[Result] = Promise[Result]()
+    json.validate[SubscribeRequest] match { 
+      case s: JsSuccess[SubscribeRequest] => {
+                                      backend.Subscribe(s.get) onComplete {
                                                 case Success(p) => promise.success( Ok(Json.prettyPrint(Json.toJson(p))) )
                                                 case Failure(e) => promise.success( BadRequest(s"${getMessageFromThrowable(e)}") )
                                       }

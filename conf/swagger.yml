@@ -12,6 +12,45 @@
   consumes: 
     - application/json
   definitions:
+    SubscribeResponse:
+      type: object
+      required:
+        - subscriptionId
+        - duration
+        - throttling
+      properties:
+        subscriptionId:
+          type: string
+        duration:
+          type: string
+        throttling:
+          type: string
+    SuccessfulSubscribe:
+      type: object
+      required:
+        - subscribeResponse
+      properties:
+        subscribeResponse:
+          $ref: "#/definitions/SubscribeResponse"
+    SubscribeRequest:
+      type: object
+      required:
+        - section
+        - group
+        - reference
+        - duration
+        - throttling
+      properties:
+        section:
+          type: string
+        group:
+          type: string
+        reference:
+          type: string
+        duration:
+          type: string
+        throttling:
+          type: string
     DSAPublicKeyString:
       type: object
       required:
