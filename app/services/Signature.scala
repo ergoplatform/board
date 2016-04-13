@@ -33,7 +33,6 @@ import java.security.spec.DSAPrivateKeySpec;
 import java.security.spec.DSAPublicKeySpec;
 import java.security.spec.KeySpec;
 import java.security.KeyFactory;
-//import java.util.Base64
 import java.nio.charset.StandardCharsets
 import ch.bfh.unicrypt.math.algebra.dualistic.classes.ZModElement;
 import ch.bfh.unicrypt.math.algebra.dualistic.classes.ZModPrime;
@@ -60,7 +59,7 @@ case class DSASignature (signerPK: DSAPublicKey, signaturePK: GStarModElement, s
     // Schnorr signature scheme
     val schnorr = SchnorrSignatureScheme.getInstance(StringMonoid.getInstance(Alphabet.BASE64), g)
     // message in Element format
-    val messageElement = schnorr.getMessageSpace().getElementFrom(base64message.toString())
+    val messageElement = schnorr.getMessageSpace().getElementFrom(base64message.getBigInteger())
     // verify
     schnorr.verify(signaturePK, messageElement, signature).isTrue()
   }
@@ -80,7 +79,7 @@ object SchnorrSigningDevice {
      // Schnorr signature scheme
      val schnorr = SchnorrSignatureScheme.getInstance(StringMonoid.getInstance(Alphabet.BASE64), g);
      // message in Element format
-     val message = schnorr.getMessageSpace().getElementFrom(base64message.toString())
+     val message = schnorr.getMessageSpace().getElementFrom(base64message.getBigInteger())
      // signature keys
 		 val keyPair = schnorr.getKeyPairGenerator().generateKeyPair()
 		 val privateKey = keyPair.getFirst()

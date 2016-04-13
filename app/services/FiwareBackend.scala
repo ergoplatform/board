@@ -102,6 +102,7 @@ class FiwareBackend @Inject()
       case s: JsSuccess[SuccessfulGetPost] => Logger.info(s"Future success:\n${response.json}\n")
                                               // commit the last post to the hash service
                                               HashService.commit(post)
+                                              // only for testing, normally all post calls should increment
                                               index.incrementAndGet()
                                               promise.success(post.board_attributes)
       case e: JsError => Logger.info(s"Future failure:\n${response.json}\n")
