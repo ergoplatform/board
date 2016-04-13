@@ -93,7 +93,9 @@ object SchnorrSigningDevice {
 
 object DSASignature {
   
-  def fromSignatureString(sig: SignatureString): DSASignature = {
+  def fromSignatureString(sig: SignatureString): Option[DSASignature] = {
+    var ret: Option[DSASignature] = None
+    try {
   		 // signer PK reconstruction
   		 val dsaPublicKeySpec : DSAPublicKeySpec = new DSAPublicKeySpec(new BigInteger(sig.signerPK.y), 
   		                                                                   new BigInteger(sig.signerPK.p), 
@@ -116,6 +118,10 @@ object DSASignature {
   		 val zSecond = zmod.getElement(new BigInteger(sig.signature.second))
   		 // the signature is the pair of elements 
   		 val signaturePair = Pair.getInstance(zFirst, zSecond)
-  		 new DSASignature(dsaPublicKey, publicKey, signaturePair)
+  		 ret = Some(new DSASignature(dsaPublicKey, publicKey, signaturePair))
+    } catch {
+      case _: Throwable => ret = None
+    }
+  	ret
   }
 }

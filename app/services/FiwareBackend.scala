@@ -103,7 +103,7 @@ class FiwareBackend @Inject()
                                               // commit the last post to the hash service
                                               HashService.commit(post)
                                               // only for testing, normally all post calls should increment
-                                              index.incrementAndGet()
+                                              //index.incrementAndGet()
                                               promise.success(post.board_attributes)
       case e: JsError => Logger.info(s"Future failure:\n${response.json}\n")
                          promise.failure(new Error(s"${response.json}"))
@@ -134,8 +134,10 @@ class FiwareBackend @Inject()
                                                                      request.user_attributes.pk,
                                                                      None))
                                   val base64message = new Base64Message(Json.toJson(leanRequest))
-                                  val signature = DSASignature.fromSignatureString(signatureStr)
-                                  signature.verify(base64message)
+                                  DSASignature.fromSignatureString(signatureStr) match {
+                                    case Some(signature) => signature.verify(base64message)
+                                    case None => false
+                                  }
      }
    }
   
@@ -146,7 +148,7 @@ class FiwareBackend @Inject()
      val promise: Promise[BoardAttributes] = Promise[BoardAttributes]()
      Logger.info(s"PostRequest Verification ${verifyPostRequest(request)}")
      // index and timestamp
-     val postIndex = index.get()
+     val postIndex = index.getAndIncrement()
      val timeStamp = System.currentTimeMillis()
      // fill in the Post object
      val postNoHash = models.Post(request.message, 
@@ -199,7 +201,7 @@ class FiwareBackend @Inject()
          "entities" -> Json.arr(Json.obj(
              "type" -> "Post",
              "isPattern" -> "false",
-             "id" -> s"${post.index}"
+             "id" -> post.index
          ))
      )
    }
