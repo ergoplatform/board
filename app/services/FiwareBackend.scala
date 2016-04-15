@@ -62,6 +62,7 @@ case class CryptoSettings(group: GStarModSafePrime, generator: Element[_])
 @Singleton
 class FiwareBackend @Inject() 
                      (ws: WSClient) 
+                     (configuration: services.Config) 
                      extends BoardBackend 
                      with JSONWriteValidator 
                      with JSONReadValidator 
@@ -178,7 +179,7 @@ class FiwareBackend @Inject()
          val data = fiwarePostQuery(post)
          Logger.info(s"POST data:\n$data\n")
          // send HTTP POST message to Fiware-Orion backend
-         val futureResponse: Future[WSResponse] = ws.url("http://localhost:1026/v1/updateContext")
+         val futureResponse: Future[WSResponse] = ws.url(s"http://${configuration.fiware.addressPort}/v1/updateContext")
          .withHeaders("Content-Type" -> "application/json",
                      "Accept" -> "application/json",
                      "Fiware-ServicePath" -> s"/${post.user_attributes.section}/${post.user_attributes.group}")
@@ -244,7 +245,7 @@ class FiwareBackend @Inject()
      val data = fiwareGetQuery(post)
      Logger.info(s"GET data:\n$data\n")
      // send HTTP POST message to Fiware-Orion backend
-     val futureResponse: Future[WSResponse] = ws.url("http://localhost:1026/v1/queryContext")
+     val futureResponse: Future[WSResponse] = ws.url(s"http://${configuration.fiware.addressPort}/v1/queryContext")
      .withHeaders("Content-Type" -> "application/json",
                  "Accept" -> "application/json",
                  "Fiware-ServicePath" -> s"/${post.section}/${post.group}")
@@ -264,10 +265,10 @@ class FiwareBackend @Inject()
          "entities" -> Json.arr(Json.obj(
              "type" -> "Post",
              "isPattern" -> "true",
-             "id" -> "*"
+             "id" -> ".*"
          )),
          "attributes" -> Json.arr(),
-         "reference" -> post.reference,
+         "reference" -> s"http://${configuration.server.dockerAddress}:${configuration.server.port}/bulletin_accumulator", //post.reference,
          "duration" -> post.duration,
          "notifyConditions" -> Json.arr(Json.obj(
              "type" -> "ONCHANGE"
@@ -295,9 +296,9 @@ class FiwareBackend @Inject()
     val promise = Promise[SuccessfulSubscribe]()
     // fill in the Subscribe query
     val data = fiwareSubscribeQuery(request)
-    Logger.info(s"GET data:\n$data\n") 
+    Logger.info(s"GET data:\n$data\n")
      // send HTTP POST message to Fiware-Orion backend
-     val futureResponse: Future[WSResponse] = ws.url("http://localhost:1026/v1/subscribeContext")
+     val futureResponse: Future[WSResponse] = ws.url(s"http://${configuration.fiware.addressPort}/v1/subscribeContext")
      .withHeaders("Content-Type" -> "application/json",
                  "Accept" -> "application/json",
                  "Fiware-ServicePath" -> s"/${request.section}/${request.group}")

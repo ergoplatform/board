@@ -18,3 +18,6 @@ libraryDependencies ++= Seq(
 )
 
 resolvers += "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases"
+
+
+PlayKeys.devSettings := Seq("play.server.http.port" -> "9000", "play.server.http.address" -> "0:0:0:0:0:0:0:0")

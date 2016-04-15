@@ -13,7 +13,6 @@ import scala.util.{Success, Failure}
 import models._
 import services.FiwareBackend
 
-
 /**
  * This controller creates an `Action` to handle bulletin post and get operations.
  * 
@@ -141,13 +140,39 @@ class BulletinController @Inject()
     json.validate[SubscribeRequest] match { 
       case s: JsSuccess[SubscribeRequest] => {
                                       backend.Subscribe(s.get) onComplete {
-                                                case Success(p) => promise.success( Ok(Json.prettyPrint(Json.toJson(p))) )
-                                                case Failure(e) => promise.success( BadRequest(s"${getMessageFromThrowable(e)}") )
+                                                case Success(p) => Logger.info(Json.prettyPrint(Json.toJson(p)))
+                                                                    promise.success( Ok(Json.prettyPrint(Json.toJson(p))) )
+                                                case Failure(e) => Logger.info(getMessageFromThrowable(e))
+                                                                  promise.success( BadRequest(s"${getMessageFromThrowable(e)}") )
                                       }
                                  }
-      case e: JsError => promise.success( BadRequest(s"$e") )
+      case e: JsError => Logger.info(s"$e")
+                         promise.success( BadRequest(s"$e") )
     }
     promise.future
   }
 
+  /**
+   * Create asynchronous `Action` to send a Consume operation to the backend
+   */
+  def accumulator = Action.async { request =>
+    process_accumulator_request(request)
+  }
+  
+  /**
+   * Check the subscribe request body is in JSON format and pass it to `json_to_backend_get`
+   */
+  private def process_accumulator_request(request : Request[AnyContent])  : Future[Result] = {
+    Logger.info(s"action: Board ACCUMULATOR")
+    request.body.asJson match {
+      case Some(json_data) => Future {
+                                        Logger.info(Json.prettyPrint(json_data))
+                                        Ok(Json.prettyPrint(json_data))
+                                      }
+      case None => Future {
+                              Logger.info(s"Bad request: not a json or json format error:\n${request.body.asRaw}\n")
+                              BadRequest(s"Bad request: not a json or json format error:\n${request.body.asRaw}\n")
+                            }
+    }
+  }
 }

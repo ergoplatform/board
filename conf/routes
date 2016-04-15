@@ -74,3 +74,5 @@ POST     /bulletin_get                    controllers.BulletinController.get
 #         $ref: '#/definitions/SuccessfulSubscribe'
 ###
 POST     /bulletin_subscribe                    controllers.BulletinController.subscribe
+
+POST     /bulletin_accumulator                    controllers.BulletinController.accumulator
