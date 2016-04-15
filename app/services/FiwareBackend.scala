@@ -67,6 +67,8 @@ class FiwareBackend @Inject()
                      with JSONWriteValidator 
                      with JSONReadValidator 
                      with FiwareQueryReadValidator 
+                     with FiwareQueryWriteValidator
+                     with Subscription
 {  
   
   // Use DSA keys
@@ -268,7 +270,7 @@ class FiwareBackend @Inject()
              "id" -> ".*"
          )),
          "attributes" -> Json.arr(),
-         "reference" -> s"http://${configuration.server.dockerAddress}:${configuration.server.port}/bulletin_accumulator", //post.reference,
+         "reference" -> s"http://${configuration.server.dockerAddress}:${configuration.server.port}/bulletin_accumulate", //post.reference,
          "duration" -> post.duration,
          "notifyConditions" -> Json.arr(Json.obj(
              "type" -> "ONCHANGE"
@@ -282,14 +284,14 @@ class FiwareBackend @Inject()
    * Interpret the answer to a Subscribe message sent to Fiware-Orion.
    * If successful, it will resolve the promise with the list of Post messages
    */
-   private def fiwareParseSubscribeAnswer(response: WSResponse, promise: Promise[SuccessfulSubscribe]) {
+   private def fiwareParseSubscribeAnswer(response: WSResponse, promise: Promise[SuccessfulSubscribe], reference: String) {
       response.json.validate[SuccessfulSubscribe] match {
-        case s: JsSuccess[SuccessfulSubscribe] => promise.success(s.get)
+        case s: JsSuccess[SuccessfulSubscribe] => addSubscription(s.get.subscribeResponse.subscriptionId, reference)
+                                                  promise.success(s.get)
         // The Fiware-Orion backend returned an error message
         case e: JsError => Logger.info(s"Future failure:\n${response.json}\n")
                            promise.failure(new Error(s"${response.json}"))
       }
-     
    }
    
   def Subscribe(request: SubscribeRequest): Future[SuccessfulSubscribe] = {
@@ -305,10 +307,37 @@ class FiwareBackend @Inject()
      .post(data)
      // Interpret HTTP POST answer
      futureResponse onComplete {
-       case Success(response) => fiwareParseSubscribeAnswer(response, promise)
+       case Success(response) => fiwareParseSubscribeAnswer(response, promise, request.reference)
        case Failure(e) => Logger.info(s"Future failure:\n$e\n")
                          promise.failure(e)
      }
     promise.future
   }
+  
+  override def Accumulate(request: AccumulateRequest): Future[JsValue] = {
+    Logger.info(s"subscriptionId: ${request.subscriptionId}, reference: ${getSubscription(request.subscriptionId)}")
+    
+    val promise = Promise[JsValue]()
+    getSubscription(request.subscriptionId) match {
+      case Some(reference) =>  Logger.info(s"ACCUMULATE data:\n${Json.prettyPrint(Json.toJson(request.contextResponses))}\n")
+                                // send HTTP POST message to the reference
+                                val futureResponse: Future[WSResponse] = ws.url(reference)
+                                .withHeaders("Content-Type" -> "application/json",
+                                             "Accept" -> "application/json")
+                                .post(Json.toJson(request.contextResponses))
+                                 
+                                // Interpret HTTP POST answer
+                                futureResponse onComplete {
+                                  case Success(response) => Logger.info(Json.prettyPrint(response.json))
+                                                             promise.success(response.json)
+                                  case Failure(e) => Logger.info(s"Failed Post to reference: $reference:\n$e\n")
+                                                    promise.failure(e)
+                                }
+      case None => Logger.info("Future failure: subscriptionId not found")
+                    promise.failure(new Error(s"Future failure: subscriptionId not found: ${request.subscriptionId}"))
+    }
+    promise.future
+  }
+  
+  
 }

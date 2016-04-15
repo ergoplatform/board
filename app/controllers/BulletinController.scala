@@ -31,6 +31,7 @@ class BulletinController @Inject()
                       with JSONReadValidator
                       with JSONWriteValidator 
                       with FiwareQueryWriteValidator
+                      with FiwareQueryReadValidator
 {
   /**
    * Create asynchronous `Action` to send a Post operation to the backend
@@ -155,24 +156,42 @@ class BulletinController @Inject()
   /**
    * Create asynchronous `Action` to send a Consume operation to the backend
    */
-  def accumulator = Action.async { request =>
-    process_accumulator_request(request)
+  def accumulate = Action.async { request =>
+    process_accumulate_request(request)
   }
   
   /**
    * Check the subscribe request body is in JSON format and pass it to `json_to_backend_get`
    */
-  private def process_accumulator_request(request : Request[AnyContent])  : Future[Result] = {
+  private def process_accumulate_request(request : Request[AnyContent])  : Future[Result] = {
     Logger.info(s"action: Board ACCUMULATOR")
     request.body.asJson match {
-      case Some(json_data) => Future {
-                                        Logger.info(Json.prettyPrint(json_data))
-                                        Ok(Json.prettyPrint(json_data))
-                                      }
+      case Some(json_data) =>  json_to_backend_accumulate(json_data)
       case None => Future {
                               Logger.info(s"Bad request: not a json or json format error:\n${request.body.asRaw}\n")
                               BadRequest(s"Bad request: not a json or json format error:\n${request.body.asRaw}\n")
                             }
     }
+  }
+  
+  
+  /**
+   * Validate JSON, convert it to a Post, and send it to the `BoardBackend` Get interface
+   */
+  private def json_to_backend_accumulate(json : libs.json.JsValue)  : Future[Result] = {
+    val promise: Promise[Result] = Promise[Result]()
+    json.validate[AccumulateRequest] match { 
+      case s: JsSuccess[AccumulateRequest] => {
+                                      backend.Accumulate(s.get) onComplete {
+                                                case Success(any) => Logger.info("Ok()")
+                                                                    promise.success( Ok("") )
+                                                case Failure(e) => Logger.info(getMessageFromThrowable(e))
+                                                                  promise.success( BadRequest(s"${getMessageFromThrowable(e)}") )
+                                      }
+                                 }
+      case e: JsError => Logger.info(s"$e")
+                         promise.success( BadRequest(s"$e") )
+    }
+    promise.future
   }
 }

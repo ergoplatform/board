@@ -1,5 +1,6 @@
 package models
 
+import play.api.libs.json.JsValue
 import scala.collection.Seq
 import scala.concurrent.{Future, Promise}
 
@@ -16,7 +17,11 @@ trait BoardBackend {
    */
   def Get(request: GetRequest): Future[Seq[Post]]
   /**
-   * `Get` operation, query the board to get a set of posts
+   * `Subscribe` operation
    */
   def Subscribe(request: SubscribeRequest): Future[SuccessfulSubscribe]
+  /**
+   * `Accumulate` operation
+   */
+  def Accumulate(request: AccumulateRequest): Future[JsValue]
 }

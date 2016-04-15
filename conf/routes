@@ -75,4 +75,4 @@ POST     /bulletin_get                    controllers.BulletinController.get
 ###
 POST     /bulletin_subscribe                    controllers.BulletinController.subscribe
 
-POST     /bulletin_accumulator                    controllers.BulletinController.accumulator
+POST     /bulletin_accumulate                    controllers.BulletinController.accumulate

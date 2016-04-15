@@ -6,17 +6,19 @@ import play.api.libs.functional.syntax._
 
 // Classes used for validating and parsing JSON
 
-case class GetAttribute(name: String, _type: String, value: JsValue)
-case class GetContextElement(id: String, isPattern: String, _type: String, attributes: Seq[GetAttribute])
-case class GetStatusCode(code: String, reasonPhrase: String)
-case class GetContextResponse(contextElement: GetContextElement, statusCode: GetStatusCode)
-case class SuccessfulGetPost(contextResponses: Seq[GetContextResponse])
+case class Attribute(name: String, _type: String, value: JsValue)
+case class ContextElement(id: String, isPattern: String, _type: String, attributes: Seq[Attribute])
+case class StatusCode(code: String, reasonPhrase: String)
+case class ContextResponse(contextElement: ContextElement, statusCode: StatusCode)
+case class SuccessfulGetPost(contextResponses: Seq[ContextResponse])
 
 case class SubscribeResponse(subscriptionId: String, duration: String, throttling: String)
 case class SuccessfulSubscribe(subscribeResponse: SubscribeResponse)
 
 case class GetErrorCode(code: String, reasonPhrase: String)
 case class FailedGetPost(errorCode: GetErrorCode)
+
+case class AccumulateRequest(subscriptionId: String, originator: String, contextResponses: Seq[ContextResponse])
 
 trait FiwareQueryReadValidator {
   
@@ -33,31 +35,31 @@ trait FiwareQueryReadValidator {
   
   // Get success validators
   
-  implicit val validateGetAttributeRead: Reads[GetAttribute] = (
+  implicit val validateGetAttributeRead: Reads[Attribute] = (
       (JsPath \ "name").read[String] and
       (JsPath \ "type").read[String] and
       (JsPath \ "value").read[JsValue]
-  )(GetAttribute.apply _)
+  )(Attribute.apply _)
   
-  implicit val validateGetContextElementRead: Reads[GetContextElement] = (
+  implicit val validateGetContextElementRead: Reads[ContextElement] = (
       (JsPath \ "id").read[String] and
       (JsPath \ "isPattern").read[String] and
       (JsPath \ "type").read[String] and
-      (JsPath \ "attributes").read[Seq[GetAttribute]](minLength[Seq[GetAttribute]](1) keepAnd maxLength[Seq[GetAttribute]](1))
-  )(GetContextElement.apply _)
+      (JsPath \ "attributes").read[Seq[Attribute]](minLength[Seq[Attribute]](1) keepAnd maxLength[Seq[Attribute]](1))
+  )(ContextElement.apply _)
   
-  implicit val validateGetStatusCodeRead: Reads[GetStatusCode] = (
+  implicit val validateGetStatusCodeRead: Reads[StatusCode] = (
       (JsPath \ "code").read[String] and
       (JsPath \ "reasonPhrase").read[String]
-  )(GetStatusCode.apply _)
+  )(StatusCode.apply _)
   
-  implicit val validateGetContextResponseRead: Reads[GetContextResponse] = (
-      (JsPath \ "contextElement").read[GetContextElement] and
-      (JsPath \ "statusCode").read[GetStatusCode]
-  )(GetContextResponse.apply _)
+  implicit val validateGetContextResponseRead: Reads[ContextResponse] = (
+      (JsPath \ "contextElement").read[ContextElement] and
+      (JsPath \ "statusCode").read[StatusCode]
+  )(ContextResponse.apply _)
   
   implicit val validateSuccessfulGetPostRead: Reads[SuccessfulGetPost] = 
-      (JsPath \ "contextResponses").read[Seq[GetContextResponse]].map{ contextResponses => SuccessfulGetPost(contextResponses)}
+      (JsPath \ "contextResponses").read[Seq[ContextResponse]].map{ contextResponses => SuccessfulGetPost(contextResponses)}
   
   // Get failure validators
   
@@ -69,6 +71,12 @@ trait FiwareQueryReadValidator {
   // see http://stackoverflow.com/questions/14754092/how-to-turn-json-to-case-class-when-case-class-has-only-one-field
   implicit val validateFailedGetRead: Reads[FailedGetPost] = 
       (JsPath \ "errorCode").read[GetErrorCode].map{ errorCode => FailedGetPost(errorCode)}
+    
+  implicit val validateAccumulateRequestRead: Reads[AccumulateRequest] = (
+      (JsPath \ "subscriptionId").read[String] and
+      (JsPath \ "originator").read[String] and
+      (JsPath \ "contextResponses").read[Seq[ContextResponse]] (minLength[Seq[ContextResponse]](1))
+  )(AccumulateRequest.apply _)
 }
 
 trait FiwareQueryWriteValidator {
@@ -82,5 +90,34 @@ trait FiwareQueryWriteValidator {
   // see http://stackoverflow.com/questions/14754092/how-to-turn-json-to-case-class-when-case-class-has-only-one-field
   implicit val validateSuccessfulSubscribeWrite: Writes[SuccessfulSubscribe] = 
       (JsPath \ "subscribeResponse").write[SubscribeResponse].contramap { a: SuccessfulSubscribe => a.subscribeResponse }
+  
+  implicit val validateAttributeWrite: Writes[Attribute] = (
+      (JsPath \ "name").write[String] and
+      (JsPath \ "_type").write[String] and
+      (JsPath \ "value").write[JsValue]
+  )(unlift(Attribute.unapply))
+  
+  implicit val validateContextElementWrite: Writes[ContextElement] = (
+      (JsPath \ "id").write[String] and
+      (JsPath \ "isPattern").write[String] and
+      (JsPath \ "_type").write[String] and
+      (JsPath \ "attributes").write[Seq[Attribute]]
+  )(unlift(ContextElement.unapply))
+  
+  implicit val validateStatusCodeWrite: Writes[StatusCode] = (
+      (JsPath \ "code").write[String] and
+      (JsPath \ "reasonPhrase").write[String]
+  )(unlift(StatusCode.unapply))
+  
+  implicit val validateContextResponseWrite: Writes[ContextResponse] = (
+      (JsPath \ "contextElement").write[ContextElement] and
+      (JsPath \ "statusCode").write[StatusCode]
+  )(unlift(ContextResponse.unapply))
+  
+  implicit val validateAccumulateRequestWrite: Writes[AccumulateRequest] = (
+      (JsPath \ "subscriptionId").write[String] and
+      (JsPath \ "originator").write[String] and
+      (JsPath \ "contextResponses").write[Seq[ContextResponse]]
+  )(unlift(AccumulateRequest.unapply))
   
 }
