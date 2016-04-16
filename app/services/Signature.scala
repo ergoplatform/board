@@ -38,48 +38,74 @@ import ch.bfh.unicrypt.math.algebra.dualistic.classes.ZModElement;
 import ch.bfh.unicrypt.math.algebra.dualistic.classes.ZModPrime;
 import java.math.BigInteger;
 import play.api.libs.json._
+import scala.util.{Try, Success, Failure}
 import models._;
 
-case class DSASignature (signerPK: DSAPublicKey, signaturePK: GStarModElement, signature: Pair) extends JSONWriteValidator {
-  def toSignatureString(): SignatureString = {
-    new models.SignatureString(DSAPublicKeyString(signerPK.getY().toString(),
-		                                             signerPK.getParams().getP().toString(),
-		                                             signerPK.getParams().getQ().toString(),
-		                                             signerPK.getParams().getG().toString()), 
-		                       signaturePK.convertToString(), 
-		                       SignatureElements(signature.getFirst().convertToBigInteger().toString(), 
-		                                         signature.getSecond().convertToBigInteger().toString(),
-		                                         signature.getFirst().getSet().getZModOrder().getModulus().toString()))
+case class DSASignature 
+(signerPK: DSAPublicKey, 
+ signaturePK: GStarModElement, 
+ signature: Pair) 
+extends JSONWriteValidator 
+{
+  def toSignatureString(): SignatureString = 
+  {
+    new models.SignatureString(
+        DSAPublicKeyString(
+            signerPK.getY().toString(),
+            signerPK.getParams().getP().toString(),
+            signerPK.getParams().getQ().toString(),
+            signerPK.getParams().getG().toString()), 
+            signaturePK.convertToString(), 
+            SignatureElements(
+                signature.getFirst().convertToBigInteger().toString(), 
+                signature.getSecond().convertToBigInteger().toString(),
+                signature.getFirst().getSet().getZModOrder().getModulus().toString()))
   }  
   
   def verify(base64message: Base64Message) : Boolean = {
     // group
-    val g_q = GStarModPrime.getInstance(signerPK.getParams().getP(), signerPK.getParams().getQ())
+    val g_q = GStarModPrime.getInstance(
+        signerPK.getParams().getP(), 
+        signerPK.getParams().getQ())
     val g = g_q.getElement(signerPK.getParams().getG())
     // Schnorr signature scheme
-    val schnorr = SchnorrSignatureScheme.getInstance(StringMonoid.getInstance(Alphabet.BASE64), g)
+    val schnorr = SchnorrSignatureScheme.getInstance(
+        StringMonoid.getInstance(Alphabet.BASE64), g)
     // message in Element format
-    val messageElement = schnorr.getMessageSpace().getElementFrom(base64message.getBigInteger())
+    val messageElement = 
+      schnorr.getMessageSpace()
+      .getElementFrom(base64message.getBigInteger())
     // verify
-    schnorr.verify(signaturePK, messageElement, signature).isTrue()
+    schnorr.verify(
+        signaturePK, 
+        messageElement, 
+        signature).isTrue()
   }
 }
 
-object SchnorrSigningDevice {
-  
-  def  signString(keypair: KeyPair, base64message: Base64Message) : DSASignature = {
+object SchnorrSigningDevice {  
+  def  signString
+  (keypair: KeyPair, 
+   base64message: Base64Message) 
+  : DSASignature = 
+  {
      // private key
-     val dsaPrivateKey : DSAPrivateKey = keypair.getPrivate().asInstanceOf[DSAPrivateKey]
-     val dsaPublicKey : DSAPublicKey = keypair.getPublic().asInstanceOf[DSAPublicKey]
+     val dsaPrivateKey = keypair.getPrivate().asInstanceOf[DSAPrivateKey]
+     val dsaPublicKey = keypair.getPublic().asInstanceOf[DSAPublicKey]
      
      val pair = new KeyPair(dsaPublicKey, dsaPrivateKey)
      // group
-     val g_q = GStarModPrime.getInstance(dsaPrivateKey.getParams().getP(), dsaPrivateKey.getParams().getQ())
+     val g_q = GStarModPrime.getInstance(
+         dsaPrivateKey.getParams().getP(), 
+         dsaPrivateKey.getParams().getQ())
      val g = g_q.getElement(dsaPrivateKey.getParams().getG())
      // Schnorr signature scheme
-     val schnorr = SchnorrSignatureScheme.getInstance(StringMonoid.getInstance(Alphabet.BASE64), g);
+     val schnorr = SchnorrSignatureScheme.getInstance(
+         StringMonoid.getInstance(Alphabet.BASE64), g);
      // message in Element format
-     val message = schnorr.getMessageSpace().getElementFrom(base64message.getBigInteger())
+     val message = 
+       schnorr.getMessageSpace()
+       .getElementFrom(base64message.getBigInteger())
      // signature keys
 		 val keyPair = schnorr.getKeyPairGenerator().generateKeyPair()
 		 val privateKey = keyPair.getFirst()
@@ -87,25 +113,33 @@ object SchnorrSigningDevice {
 		 // signature
 		 val signature : Pair = schnorr.sign(privateKey, message)
 		 
-		 new DSASignature(dsaPublicKey, publicKey.asInstanceOf[GStarModElement], signature)
+		 new DSASignature(
+		     dsaPublicKey, 
+		     publicKey.asInstanceOf[GStarModElement], 
+		     signature)
   }
 }
 
 object DSASignature {
   
   def fromSignatureString(sig: SignatureString): Option[DSASignature] = {
-    var ret: Option[DSASignature] = None
-    try {
+    Try {
   		 // signer PK reconstruction
-  		 val dsaPublicKeySpec : DSAPublicKeySpec = new DSAPublicKeySpec(new BigInteger(sig.signerPK.y), 
-  		                                                                   new BigInteger(sig.signerPK.p), 
-  		                                                                   new BigInteger(sig.signerPK.q), 
-  		                                                                   new BigInteger(sig.signerPK.g))
-       val keyFactory : KeyFactory = KeyFactory.getInstance("DSA")
-       val dsaPublicKey  = keyFactory.generatePublic(dsaPublicKeySpec).asInstanceOf[DSAPublicKey]
+  		 val dsaPublicKeySpec = 
+  		   new DSAPublicKeySpec(
+  		       new BigInteger(sig.signerPK.y), 
+  		       new BigInteger(sig.signerPK.p), 
+             new BigInteger(sig.signerPK.q), 
+             new BigInteger(sig.signerPK.g))
+       val keyFactory = KeyFactory.getInstance("DSA")
+       val dsaPublicKey  = 
+         keyFactory.generatePublic(dsaPublicKeySpec)
+         .asInstanceOf[DSAPublicKey]
                                    
        // group
-       val g_q = GStarModPrime.getInstance(dsaPublicKey.getParams().getP(), dsaPublicKey.getParams().getQ())
+       val g_q = GStarModPrime.getInstance(
+           dsaPublicKey.getParams().getP(), 
+           dsaPublicKey.getParams().getQ())
        val g2 = g_q.getElement(dsaPublicKey.getParams().getG())
        
        // signature PK reconstruction: GStarModElement
@@ -118,10 +152,10 @@ object DSASignature {
   		 val zSecond = zmod.getElement(new BigInteger(sig.signature.second))
   		 // the signature is the pair of elements 
   		 val signaturePair = Pair.getInstance(zFirst, zSecond)
-  		 ret = Some(new DSASignature(dsaPublicKey, publicKey, signaturePair))
-    } catch {
-      case _: Throwable => ret = None
+  		 Some(new DSASignature(dsaPublicKey, publicKey, signaturePair))
+    } match {
+      case Success(some) => some
+      case Failure(error) =>  None
     }
-  	ret
   }
 }

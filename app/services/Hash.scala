@@ -54,7 +54,8 @@ object HashService extends JSONWriteValidator {
       } 
       // the post received is outdated
       else {
-        promise.failure(new Error(s"Post index ${index} is outdated. Last post had index ${lastCommitedIndex}"))
+        promise.failure(new Error(s"Post index ${index} is outdated. " + 
+                      s"Last post had index ${lastCommitedIndex}"))
       }
     }
     promise.future
