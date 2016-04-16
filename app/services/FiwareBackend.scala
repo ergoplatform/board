@@ -319,7 +319,7 @@ class FiwareBackend @Inject()
     
     val promise = Promise[JsValue]()
     getSubscription(request.subscriptionId) match {
-      case Some(reference) =>  Logger.info(s"ACCUMULATE data:\n${Json.prettyPrint(Json.toJson(request.contextResponses))}\n")
+      case Some(reference) =>  Logger.info(s"ACCUMULATE data:\n${request.contextResponses}\n")
                                 // send HTTP POST message to the reference
                                 val futureResponse: Future[WSResponse] = ws.url(reference)
                                 .withHeaders("Content-Type" -> "application/json",
@@ -328,8 +328,12 @@ class FiwareBackend @Inject()
                                  
                                 // Interpret HTTP POST answer
                                 futureResponse onComplete {
-                                  case Success(response) => Logger.info(Json.prettyPrint(response.json))
-                                                             promise.success(response.json)
+                                  case Success(response) => Logger.info("ACCUMULATE reference response: " + response.body)
+                                                             try {
+                                                               promise.success(response.json)
+                                                             } catch {
+                                                               case e: Exception => promise.success(JsNull)
+                                                             }
                                   case Failure(e) => Logger.info(s"Failed Post to reference: $reference:\n$e\n")
                                                     promise.failure(e)
                                 }
