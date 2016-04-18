@@ -12,6 +12,72 @@
   consumes: 
     - application/json
   definitions:
+    Attribute:
+      type: object
+      required:
+        - name
+        - type
+        - value
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        value:
+          type: object
+    ContextElement:
+      type: object
+      required:
+        - id
+        - isPattern
+        - type
+        - attributes
+      properties:
+        id:
+          type: string
+        isPattern:
+          type: string
+        type:
+          type: string
+        attributes:
+          type: array
+          items:
+            $ref: "#/definitions/Attribute"
+    StatusCode:
+      type: object
+      required:
+        - code
+        - reasonPhrase
+      properties:
+        code:
+          type: string
+        reasonPhrase:
+          type: string
+    ContextResponse:
+      type: object
+      required:
+        - contextElement
+        - statusCode
+      properties:
+        contextElement:
+          $ref: "#/definitions/ContextElement"
+        statusCode:
+          $ref: "#/definitions/StatusCode"
+    AccumulateRequest:
+      type: object
+      required:
+        - subscriptionId
+        - originator
+        - contextResponses
+      properties:
+        subscriptionId:
+          type: string
+        originator:
+          type: string
+        contextResponses:
+          type: array
+          items:
+            $ref: "#/definitions/ContextResponse"
     SubscribeResponse:
       type: object
       required:
