@@ -30,7 +30,7 @@ class Hash (message: Base64Message) {
   }
 }
 
-object HashService extends JSONWriteValidator {
+object HashService extends BoardJSONFormatter {
   private var postMap = Map[Int, Tuple2[Base64Message,Promise[Hash]]]()
   private var lastCommitedIndex: Int = -1
   private var lastPostB64: Base64Message = new Base64Message(JsNull)
@@ -68,10 +68,10 @@ object HashService extends JSONWriteValidator {
       lastCommitedIndex = lastCommitedIndex +1
       val index = post.board_attributes.index.toInt
       if(index == lastCommitedIndex + 1) {
-        postMap.get(index) match {
-              case Some(r) => r._2.success(new Hash(lastPostB64 + r._1))
-                               postMap -= (index)
-                               ret = true
+        postMap.get(index) map { r =>
+               r._2.success(new Hash(lastPostB64 + r._1))
+               postMap -= (index)
+               ret = true
             }
       }
     }

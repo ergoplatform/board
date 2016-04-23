@@ -9,15 +9,15 @@ import play.api.libs.functional.syntax._
 case class DSAPublicKeyString(y: String, p: String, q: String, g: String)
 case class SignatureElements(first: String, second: String, zmod: String)
 case class SignatureString(signerPK: DSAPublicKeyString, signaturePK: String, signature: SignatureElements)
-case class UserAttributes(section: String, group: String, pk: String, signature: Option[SignatureString] = None)
+case class UserAttributes(section: String, group: String, pk: Option[String] = None, signature: Option[SignatureString] = None)
 case class BoardAttributes(index: String, timestamp: String, hash: String, signature: Option[SignatureString] = None)
 case class PostRequest(message: String, user_attributes: UserAttributes)
-case class Post(message: String, user_attributes: UserAttributes, board_attributes: BoardAttributes)  
+case class Post(message: String, user_attributes: UserAttributes, board_attributes: BoardAttributes)
 case class GetRequest(section: String, group: String, index: String)
 case class SubscribeRequest(section: String, group: String, reference: String, duration: String, throttling: String)
 
 // This trait enables easily reading a Json into a Post
-trait JSONReadValidator {
+trait BoardJSONFormatter {
   implicit val subscribeRequestReads: Reads[SubscribeRequest] = (
       (JsPath \ "section").read[String] and
       (JsPath \ "group").read[String] and
@@ -48,7 +48,7 @@ trait JSONReadValidator {
   implicit val userAttributesReads: Reads[UserAttributes] = (
       (JsPath \ "section").read[String] and
       (JsPath \ "group").read[String] and
-      (JsPath \ "pk").read[String] and
+      (JsPath \ "pk").readNullable[String] and
       (JsPath \ "signature").readNullable[SignatureString] 
   )(UserAttributes.apply _)
   
@@ -75,10 +75,7 @@ trait JSONReadValidator {
       (JsPath \ "group").read[String] and
       (JsPath \ "index").read[String]
   )(GetRequest.apply _)
-}
 
-// This trait enables easily writing a Post into a Json
-trait JSONWriteValidator {
   implicit val dsaPublicKeyStringWrites: Writes[DSAPublicKeyString] = (
       (JsPath \ "y").write[String] and
       (JsPath \ "p").write[String] and
@@ -101,7 +98,7 @@ trait JSONWriteValidator {
   implicit val userAttributesWrites: Writes[UserAttributes] = (
       (JsPath \ "section").write[String] and
       (JsPath \ "group").write[String] and
-      (JsPath \ "pk").write[String] and
+      (JsPath \ "pk").writeNullable[String] and
       (JsPath \ "signature").writeNullable[SignatureString] 
   )(unlift(UserAttributes.unapply))
   

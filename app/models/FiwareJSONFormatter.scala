@@ -20,7 +20,7 @@ case class FailedGetPost(errorCode: GetErrorCode)
 
 case class AccumulateRequest(subscriptionId: String, originator: String, contextResponses: Seq[ContextResponse])
 
-trait FiwareQueryReadValidator {
+trait FiwareJSONFormatter {
   
   // Subscribe success validators
   
@@ -77,9 +77,6 @@ trait FiwareQueryReadValidator {
       (JsPath \ "originator").read[String] and
       (JsPath \ "contextResponses").read[Seq[ContextResponse]] (minLength[Seq[ContextResponse]](1))
   )(AccumulateRequest.apply _)
-}
-
-trait FiwareQueryWriteValidator {
   
   implicit val validateSubscribeResponseWrite: Writes[SubscribeResponse] = (
       (JsPath \ "subscriptionId").write[String] and
@@ -119,5 +116,8 @@ trait FiwareQueryWriteValidator {
       (JsPath \ "originator").write[String] and
       (JsPath \ "contextResponses").write[Seq[ContextResponse]]
   )(unlift(AccumulateRequest.unapply))
+    
+  implicit val validateSuccessfulGetPostWrites: Writes[SuccessfulGetPost] = 
+      (JsPath \ "contextResponses").write[Seq[ContextResponse]].contramap((f: SuccessfulGetPost) => f.contextResponses)
   
 }

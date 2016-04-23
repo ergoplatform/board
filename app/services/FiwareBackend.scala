@@ -62,14 +62,11 @@ class FiwareBackend @Inject()
                      (ws: WSClient) 
                      (configuration: services.Config) 
                      extends BoardBackend 
-                     with JSONWriteValidator 
-                     with JSONReadValidator 
-                     with FiwareQueryReadValidator 
-                     with FiwareQueryWriteValidator
+                     with BoardJSONFormatter
+                     with FiwareJSONFormatter
                      with Subscription
                      with ErrorProcessing
 {  
-  
   // Use DSA keys
   private val keyGen = KeyPairGenerator.getInstance("DSA")
   keyGen.initialize(2048)
@@ -223,7 +220,7 @@ class FiwareBackend @Inject()
    }
    
   // Parse a `Get` into a JSON query that Fiware understands
-   private def fiwareGetQuery(post: models.GetRequest): JsValue = {
+  private def fiwareGetQuery(post: models.GetRequest): JsValue = {
      Json.obj(
          "entities" -> Json.arr(Json.obj(
              "type" -> "Post",

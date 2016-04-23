@@ -24,15 +24,13 @@ import services.FiwareBackend
  */
 @Singleton
 class BulletinController @Inject() 
-                      (actorSystem: ActorSystem)
-                      (backend: BoardBackend)
-                      (implicit exec: ExecutionContext) 
-                      extends Controller 
-                      with JSONReadValidator
-                      with JSONWriteValidator 
-                      with FiwareQueryWriteValidator
-                      with FiwareQueryReadValidator
-                      with ErrorProcessing
+  (actorSystem: ActorSystem)
+  (backend: BoardBackend)
+  (implicit exec: ExecutionContext) 
+  extends Controller 
+  with BoardJSONFormatter
+  with FiwareJSONFormatter
+  with ErrorProcessing
 {
   /**
    * Create asynchronous `Action` to send a Post operation to the backend
@@ -56,6 +54,7 @@ class BulletinController @Inject()
         Future { BadRequest(s"Bad request: not a json or json format error:\n" + request.body) }
     }
   }
+
   /**
    * Validate JSON, convert it to a PostRequest, and send it to the `BoardBackend` Post interface
    */
@@ -68,7 +67,7 @@ class BulletinController @Inject()
         case s: JsSuccess[PostRequest] => 
           backend.Post(s.get) onComplete {
             case Success(p) => 
-              promise.success( Ok(Json.prettyPrint(Json.toJson(p))) );
+              promise.success( Ok( Json.toJson(p)) );
             case Failure(e) => 
               promise.success( BadRequest(s"${getMessageFromThrowable(e)}") )
           }

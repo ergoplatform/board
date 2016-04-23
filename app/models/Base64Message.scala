@@ -25,4 +25,8 @@ class Base64Message(js: JsValue = JsNull) {
   def getBigInteger(): BigInteger = {
     new BigInteger(decodedBytes)
   }
+
+  def decode() : String= {
+    new String(decodedBytes)
+  }
 }

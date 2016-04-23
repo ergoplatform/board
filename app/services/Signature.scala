@@ -45,8 +45,13 @@ case class DSASignature
 (signerPK: DSAPublicKey, 
  signaturePK: GStarModElement, 
  signature: Pair) 
-extends JSONWriteValidator 
+extends BoardJSONFormatter 
 {
+  def test(el: GStarModElement, a: GStarModSafePrime) {
+    el.convertToString()
+    a.getModulus().toString()
+    GStarModSafePrime.getInstance(new BigInteger(a.getModulus().toString()))
+  }
   def toSignatureString(): SignatureString = 
   {
     new models.SignatureString(
