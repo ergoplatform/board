@@ -75,7 +75,7 @@ POST     /bulletin_get                    controllers.BulletinController.get
 ###
 POST     /bulletin_subscribe                    controllers.BulletinController.subscribe
 
-###
+### 
 # summary: PBB accumulate
 # description: After a successful subscription, subscription messages will arrive here and then the PBB will redirect them to the subscriber
 # parameters:

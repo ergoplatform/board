@@ -90,14 +90,14 @@ trait FiwareJSONFormatter {
   
   implicit val validateAttributeWrite: Writes[Attribute] = (
       (JsPath \ "name").write[String] and
-      (JsPath \ "_type").write[String] and
+      (JsPath \ "type").write[String] and
       (JsPath \ "value").write[JsValue]
   )(unlift(Attribute.unapply))
   
   implicit val validateContextElementWrite: Writes[ContextElement] = (
       (JsPath \ "id").write[String] and
       (JsPath \ "isPattern").write[String] and
-      (JsPath \ "_type").write[String] and
+      (JsPath \ "type").write[String] and
       (JsPath \ "attributes").write[Seq[Attribute]]
   )(unlift(ContextElement.unapply))
   

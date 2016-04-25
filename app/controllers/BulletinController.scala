@@ -23,7 +23,7 @@ import services.FiwareBackend
  * asynchronous code.
  */
 @Singleton
-class BulletinController @Inject() 
+class BulletinController @Inject()
   (actorSystem: ActorSystem)
   (backend: BoardBackend)
   (implicit exec: ExecutionContext) 
@@ -67,7 +67,7 @@ class BulletinController @Inject()
         case s: JsSuccess[PostRequest] => 
           backend.Post(s.get) onComplete {
             case Success(p) => 
-              promise.success( Ok( Json.toJson(p)) );
+              promise.success( Ok(Json.toJson(p)) );
             case Failure(e) => 
               promise.success( BadRequest(s"${getMessageFromThrowable(e)}") )
           }
@@ -161,7 +161,7 @@ class BulletinController @Inject()
         backend.Subscribe(s.get) onComplete {
           case Success(p) => 
             Logger.info(Json.prettyPrint(Json.toJson(p)))
-            promise.success( Ok(Json.prettyPrint(Json.toJson(p))) )
+            promise.success( Ok(p.subscribeResponse.subscriptionId) )
           case Failure(e) => 
             Logger.info(getMessageFromThrowable(e))
             promise.success( BadRequest(getMessageFromThrowable(e)) )
@@ -206,11 +206,11 @@ class BulletinController @Inject()
             Logger.info("Ok()")
             promise.success( Ok("") )
           case Failure(e) => 
-            Logger.info(getMessageFromThrowable(e))
+            Logger.info("ACCUUMULATE Failure " + getMessageFromThrowable(e))
             promise.success( BadRequest(getMessageFromThrowable(e)) )
         }
       case e: JsError => 
-        Logger.info(s"$e")
+        Logger.info("ACCUUMULATE JsError " + s"$e")
         promise.success( BadRequest(s"$e") )
     }
     promise.future

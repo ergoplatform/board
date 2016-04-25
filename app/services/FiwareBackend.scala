@@ -308,11 +308,11 @@ class FiwareBackend @Inject()
          "attributes" -> Json.arr(),
          "reference" -> (s"http://${configuration.server.dockerAddress}:" +
                        s"${configuration.server.port}/bulletin_accumulate"), 
-         "duration" -> post.duration,
+         "duration" -> "P1M",
          "notifyConditions" -> Json.arr(Json.obj(
              "type" -> "ONCHANGE"
          )),
-         "throttling" -> post.throttling
+         "throttling" -> "PT1S"
      )
    }
    
@@ -351,38 +351,43 @@ class FiwareBackend @Inject()
     val promise = Promise[SuccessfulSubscribe]()
     // fill in the Subscribe query
     val data = fiwareSubscribeQuery(request)
-    Logger.info(s"GET data:\n$data\n")
-     // send HTTP POST message to Fiware-Orion backend
-     val futureResponse: Future[WSResponse] = 
-     ws.url(s"http://${configuration.fiware.addressPort}/v1/subscribeContext")
-     .withHeaders("Content-Type" -> "application/json",
-                 "Accept" -> "application/json",
-                 "Fiware-ServicePath" -> s"/${request.section}/${request.group}")
-     .post(data)
-     // Interpret HTTP POST answer
-     futureResponse onComplete {
-       case Success(response) =>
-         fiwareParseSubscribeAnswer(response, promise, request.reference)
-       case Failure(e) => 
-         Logger.info(s"Future failure:\n$e\n")
-         promise.failure(e)
-     }
+    val path ="/" + (if(request.section.length() > 0) {
+      request.section + (if(request.group.length() > 0) {
+        "/" + request.group
+      } else "")
+    } else "")
+    Logger.info(s"GET path: $path data:\n$data\n")
+    // send HTTP POST message to Fiware-Orion backend
+    val futureResponse: Future[WSResponse] = 
+    ws.url(s"http://${configuration.fiware.addressPort}/v1/subscribeContext")
+    .withHeaders("Content-Type" -> "application/json",
+                "Accept" -> "application/json",
+                "Fiware-ServicePath" -> path)
+    .post(data)
+    // Interpret HTTP POST answer
+    futureResponse onComplete {
+      case Success(response) =>
+        fiwareParseSubscribeAnswer(response, promise, request.reference)
+      case Failure(e) => 
+        Logger.info(s"Future failure:\n$e\n")
+        promise.failure(e)
+    }
     promise.future
   }
   
   override def Accumulate(request: AccumulateRequest): Future[JsValue] = {
-    Logger.info(s"subscriptionId: ${request.subscriptionId}, " +
-               "reference: ${getSubscription(request.subscriptionId)}")
     
     val promise = Promise[JsValue]()
     getSubscription(request.subscriptionId) match {
       case Some(reference) =>  
-        Logger.info(s"ACCUMULATE data:\n${request.contextResponses}\n")
+      Logger.info(s"subscriptionId: ${request.subscriptionId}, " +
+               s"reference: ${reference}")
+        Logger.info(s"ACCUMULATE data:\n${request}\n")
         // send HTTP POST message to the reference
         val futureResponse: Future[WSResponse] = ws.url(reference)
         .withHeaders("Content-Type" -> "application/json",
                      "Accept" -> "application/json")
-        .post(Json.toJson(request.contextResponses))
+        .post(Json.toJson(request))
          
         // Interpret HTTP POST answer
         futureResponse onComplete {

@@ -14,16 +14,14 @@ case class BoardAttributes(index: String, timestamp: String, hash: String, signa
 case class PostRequest(message: String, user_attributes: UserAttributes)
 case class Post(message: String, user_attributes: UserAttributes, board_attributes: BoardAttributes)
 case class GetRequest(section: String, group: String, index: String)
-case class SubscribeRequest(section: String, group: String, reference: String, duration: String, throttling: String)
+case class SubscribeRequest(section: String, group: String, reference: String)
 
 // This trait enables easily reading a Json into a Post
 trait BoardJSONFormatter {
   implicit val subscribeRequestReads: Reads[SubscribeRequest] = (
       (JsPath \ "section").read[String] and
       (JsPath \ "group").read[String] and
-      (JsPath \ "reference").read[String] and
-      (JsPath \ "duration").read[String] and
-      (JsPath \ "throttling").read[String] 
+      (JsPath \ "reference").read[String]
   )(SubscribeRequest.apply _)
   
   implicit val dsaPublicKeyStringReads: Reads[DSAPublicKeyString] = (
@@ -129,8 +127,6 @@ trait BoardJSONFormatter {
   implicit val subscribeRequestWrites: Writes[SubscribeRequest] = (
       (JsPath \ "section").write[String] and
       (JsPath \ "group").write[String] and
-      (JsPath \ "reference").write[String] and
-      (JsPath \ "duration").write[String] and
-      (JsPath \ "throttling").write[String] 
+      (JsPath \ "reference").write[String]
   )(unlift(SubscribeRequest.unapply))
 }
