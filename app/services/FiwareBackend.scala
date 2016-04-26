@@ -103,7 +103,7 @@ class FiwareBackend @Inject()
   {
     Try(response.json) match {
       case Success(json) => 
-        val jsonStr = Json.prettyPrint(json)
+        val jsonStr = Json.stringify(json)
         json.validate[SuccessfulGetPost] match {
           case s: JsSuccess[SuccessfulGetPost] => 
             Logger.info(s"Future success:\n${jsonStr}\n")
@@ -395,7 +395,7 @@ class FiwareBackend @Inject()
             Try (response.json) match {
                case Success(json) => 
                  Logger.info("ACCUMULATE reference response: " + 
-                            Json.prettyPrint(json))
+                            Json.stringify(json))
                  promise.success(json)
                case Failure(fail) => 
                  Logger.info("ACCUMULATE reference response: " + 
