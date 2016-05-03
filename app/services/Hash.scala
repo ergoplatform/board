@@ -33,7 +33,7 @@ class Hash (message: Base64Message) {
 object HashService extends BoardJSONFormatter {
   private var postMap = Map[Int, Tuple2[Base64Message,Promise[Hash]]]()
   private var lastCommitedIndex: Int = -1
-  private var lastPostB64: Base64Message = new Base64Message(JsNull)
+  private var lastPostB64: Base64Message = new Base64Message("")
   
   def createHash(post: Post) : Future[Hash] = {
     val promise = Promise[Hash]()
@@ -41,7 +41,7 @@ object HashService extends BoardJSONFormatter {
       val index = post.board_attributes.index.toInt
       // we already received the previous post, we can calculate the hash
       if(lastCommitedIndex + 1 == index) {
-        val messageB64 = new Base64Message(Json.toJson(post))
+        val messageB64 = new Base64Message(Json.stringify(Json.toJson(post)))
         promise.success(new Hash(lastPostB64 + messageB64))
       }
       // the post is out of order, wait till we receive the previous post
@@ -49,7 +49,7 @@ object HashService extends BoardJSONFormatter {
         if(postMap.contains(index)) {
           promise.failure(new Error(s"Post index collision with index: ${index}"))
         } else {
-          postMap += (index -> (new Base64Message(Json.toJson(post)), promise))
+          postMap += (index -> (new Base64Message(Json.stringify(Json.toJson(post))), promise))
         }
       } 
       // the post received is outdated
@@ -64,7 +64,7 @@ object HashService extends BoardJSONFormatter {
   def commit(post: Post) {
     var ret = false
     postMap.synchronized {
-      lastPostB64 = new Base64Message(Json.toJson(post))
+      lastPostB64 = new Base64Message(Json.stringify(Json.toJson(post)))
       lastCommitedIndex = lastCommitedIndex +1
       val index = post.board_attributes.index.toInt
       if(index == lastCommitedIndex + 1) {

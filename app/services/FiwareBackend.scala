@@ -123,7 +123,7 @@ class FiwareBackend @Inject()
   }
    
    def signPost(post: models.Post): models.Post = {
-     val message = new Base64Message(Json.toJson(post))
+     val message = new Base64Message(Json.stringify(Json.toJson(post)))
      val signature = SchnorrSigningDevice.signString(keyPair, message)
      Logger.info(s"Post Verification ${signature.verify(message)}")
      val signatureStr = signature.toSignatureString()
@@ -149,7 +149,7 @@ class FiwareBackend @Inject()
                  request.user_attributes.section,
                  request.user_attributes.pk,
                  None))
-         val base64message = new Base64Message(Json.toJson(leanRequest))
+         val base64message = new Base64Message(Json.stringify(Json.toJson(leanRequest)))
          DSASignature.fromSignatureString(signatureStr) match {
            case Some(signature) => signature.verify(base64message)
            case None => false
@@ -167,9 +167,13 @@ class FiwareBackend @Inject()
      val postIndex = index.getAndIncrement()
      val timeStamp = System.currentTimeMillis()
      // fill in the Post object
+     // the message will be encoded with Base64
+     val b64 = new Base64Message(request.message)
+     // for some reason Fiware doesn't like the '=' character on a String (or \")
+     val msg = b64.toString().replace('=', '.')
      val postNoHash = 
        models.Post(
-           request.message, 
+           msg,
            request.user_attributes, 
            // add board attributes, including index and timestamp
            BoardAttributes(s"$postIndex",s"$timeStamp","",None))
@@ -183,9 +187,10 @@ class FiwareBackend @Inject()
      }
      
      hashFuture onSuccess {
-       case hash =>  
+       case hash =>
          val postNotSigned = 
-           models.Post(request.message, 
+           models.Post(
+             msg, 
              request.user_attributes, 
              // add hash
              BoardAttributes(
@@ -242,25 +247,52 @@ class FiwareBackend @Inject()
        case Success(json) => 
          json.validate[SuccessfulGetPost] match {
           case s: JsSuccess[SuccessfulGetPost] => 
-            var hasMapError = false
+            var hasMapError : Option[String] = None
             // Map attribute.value to Post
-            val jsOpt: Seq[Option[Post]] = s.get.contextResponses.map(
+            val postList: Seq[Post] = s.get.contextResponses.flatMap(
                 _.contextElement.attributes(0).value.validate[Post] match {
-                    case sp: JsSuccess[Post] => Some(sp.get)
-                    case e: JsError => hasMapError = true
-                                       None
+                    case sp: JsSuccess[Post] =>
+                      Try {
+                        val post = sp.get
+                        // for some reason Fiware doesn't like the '=' character on a String (or \")
+                        val messageB64 = post.message.replace('.', '=')
+                        // the message was Base64 encoded so it has to be decoded
+                        val msg =new String(Base64.getDecoder.decode(messageB64), StandardCharsets.UTF_8)
+                        Some(models.Post(msg, post.user_attributes, post.board_attributes))
+                      } match {
+                        case Success(some) => 
+                          some
+                        case Failure(err) =>
+                          val strError = getMessageFromThrowable(err)
+                          hasMapError = hasMapError match {
+                            case Some(s) =>
+                              Some(s + "\n" + strError)
+                            case None =>
+                              Some(strError)
+                          }
+                          None
+                      }
+                    case e: JsError => 
+                      hasMapError = hasMapError match {
+                        case Some(s) =>
+                          Some(s + s"\n$e")
+                        case None =>
+                          Some(s"$e")
+                      }
+                      None
             })
+            hasMapError match {
             // If there was any error, resolve the promise with a failure
-            if(hasMapError) {
-              Logger.info(s"Future failure:\n${json}\n")
-              promise.failure(new Error(s"${json}"))
-            } else {
-              // Otherwise return the Get results as a list of Post messages
-              Logger.info(s"Future success:\n${json}\n")
-              promise.success(jsOpt.map(_.get))
+              case Some(err) =>
+                Logger.info(s"Future failure:\n${json}\nError: $err")
+                promise.failure(new Error(err))
+            // Otherwise return the Get results as a list of Post messages
+              case None =>
+                Logger.info(s"Future success:\n${json}\n")
+                promise.success(postList)
             }
           // The Fiware-Orion backend returned an error message
-          case e: JsError => 
+          case e: JsError =>
             val responseStr = Json.prettyPrint(json)
             Logger.info(s"Future failure:\n${responseStr}\n")
             promise.failure(new Error(responseStr))
@@ -332,6 +364,7 @@ class FiwareBackend @Inject()
        case Success(json) => 
          json.validate[SuccessfulSubscribe] match {
            case s: JsSuccess[SuccessfulSubscribe] => 
+             Logger.info("Subscribe: adding subscription Id: ${s.get.subscribeResponse.subscriptionId} with reference: ${reference}")
              addSubscription(s.get.subscribeResponse.subscriptionId, reference)
              promise.success(s.get)
            // The Fiware-Orion backend returned an error message with json format
@@ -375,37 +408,109 @@ class FiwareBackend @Inject()
     promise.future
   }
   
+  def decodeAccumulate(request: AccumulateRequest): Future[AccumulateRequest] = 
+  Future {
+    var parseError: Option[String] = None
+    val contextResponses = request.contextResponses map { x =>
+      val attributes= x.contextElement.attributes flatMap { y =>
+          y.value.validate[Post] match {
+            case postSuccess: JsSuccess[Post] =>
+              Try { 
+                val post = postSuccess.get
+                // for some reason Fiware doesn't like the '=' character on a String (or \")
+                val messageB64 = post.message.replace('.', '=')
+                // the message was Base64 encoded so it has to be decoded
+                val msg = new String(
+                    Base64.getDecoder.decode(messageB64), 
+                    StandardCharsets.UTF_8)
+                Some(
+                    Attribute(
+                        y.name, 
+                        y._type, 
+                        Json.toJson(
+                            models.Post(
+                                msg, 
+                                post.user_attributes, 
+                                post.board_attributes
+                ))))
+              } match {
+                case Success(some) =>
+                  some
+                case Failure(err) =>
+                  val str = "Decoding  Base64 string error: this is not " +
+                          s"a valid Post: ${y.value}!\nError: $err"
+                  Logger.info(str)
+                  parseError = parseError match {
+                    case Some(err) =>
+                      Some(err +"\n" + str)
+                    case None =>
+                      Some(str)
+                  }
+                  None
+              }
+            case e: JsError =>
+              val str = "Decoding error: this is not " +
+                      s"a valid Post: ${y.value}!\nError: $e"
+              Logger.info(str)
+              parseError = parseError match {
+                case Some(err) =>
+                  Some(err +"\n" + str)
+                case None =>
+                  Some(str)
+              }
+              None
+        }
+      }
+      ContextResponse(ContextElement(x.contextElement.id, x.contextElement.isPattern ,x.contextElement._type, attributes), x.statusCode)
+    }
+    parseError match {
+      case Some(err) =>
+        throw new Error(err)
+      case None =>
+        AccumulateRequest(request.originator, request.subscriptionId, contextResponses)
+    }
+  }
+  
+  
   override def Accumulate(request: AccumulateRequest): Future[JsValue] = {
-    
     val promise = Promise[JsValue]()
     getSubscription(request.subscriptionId) match {
       case Some(reference) =>  
       Logger.info(s"subscriptionId: ${request.subscriptionId}, " +
                s"reference: ${reference}")
         Logger.info(s"ACCUMULATE data:\n${request}\n")
-        // send HTTP POST message to the reference
-        val futureResponse: Future[WSResponse] = ws.url(reference)
-        .withHeaders("Content-Type" -> "application/json",
-                     "Accept" -> "application/json")
-        .post(Json.toJson(request))
-         
-        // Interpret HTTP POST answer
-        futureResponse onComplete {
-          case Success(response) => 
-            Try (response.json) match {
-               case Success(json) => 
-                 Logger.info("ACCUMULATE reference response: " + 
-                            Json.stringify(json))
-                 promise.success(json)
-               case Failure(fail) => 
-                 Logger.info("ACCUMULATE reference response: " + 
-                            response.body)
-                 promise.success(JsString(response.body))
-             }
-          case Failure(e) => 
-            Logger.info(s"Failed Post to reference: $reference:\n$e\n")
-            promise.failure(e)
+        val futureDecode = decodeAccumulate(request)
+        
+        futureDecode onComplete {
+          case Success(decoded) => 
+            // send HTTP POST message to the reference
+            val futureResponse: Future[WSResponse] = ws.url(reference)
+            .withHeaders("Content-Type" -> "application/json",
+                         "Accept" -> "application/json")
+            .post(Json.toJson(decoded))
+             
+            // Interpret HTTP POST answer
+            futureResponse onComplete {
+              case Success(response) => 
+                Try (response.json) match {
+                   case Success(json) => 
+                     Logger.info("ACCUMULATE reference response: " + 
+                                Json.stringify(json))
+                     promise.success(json)
+                   case Failure(fail) => 
+                     Logger.info("ACCUMULATE reference response ERROR: " + 
+                                response.body)
+                     promise.failure(fail)
+                 }
+              case Failure(e) => 
+                Logger.info(s"ACCUMULATE to reference: $reference:\n$e\n")
+                promise.failure(e)
+            }
+          case Failure(err) =>
+            Logger.info(s"ACCUMULATE decoding error: $reference:\n$err\n")
+            promise.failure(err)
         }
+        
       case None => 
         Logger.info("Future failure: subscriptionId not found")
         promise.failure(new Error("Future failure: subscriptionId not found:"
