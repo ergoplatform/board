@@ -364,7 +364,7 @@ class FiwareBackend @Inject()
        case Success(json) => 
          json.validate[SuccessfulSubscribe] match {
            case s: JsSuccess[SuccessfulSubscribe] => 
-             Logger.info("Subscribe: adding subscription Id: ${s.get.subscribeResponse.subscriptionId} with reference: ${reference}")
+             Logger.info(s"Subscribe: adding subscription Id: ${s.get.subscribeResponse.subscriptionId} with reference: ${reference}")
              addSubscription(s.get.subscribeResponse.subscriptionId, reference)
              promise.success(s.get)
            // The Fiware-Orion backend returned an error message with json format
@@ -389,7 +389,7 @@ class FiwareBackend @Inject()
         "/" + request.group
       } else "")
     } else "")
-    Logger.info(s"GET path: $path data:\n$data\n")
+    Logger.info(s"Subscribe path: $path data:\n$data\n")
     // send HTTP POST message to Fiware-Orion backend
     val futureResponse: Future[WSResponse] = 
     ws.url(s"http://${configuration.fiware.addressPort}/v1/subscribeContext")
