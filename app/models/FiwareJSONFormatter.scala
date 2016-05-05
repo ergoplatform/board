@@ -12,7 +12,7 @@ case class StatusCode(code: String, reasonPhrase: String)
 case class ContextResponse(contextElement: ContextElement, statusCode: StatusCode)
 case class SuccessfulGetPost(contextResponses: Seq[ContextResponse])
 
-case class SubscribeResponse(subscriptionId: String, duration: String, throttling: String)
+case class SubscribeResponse(subscriptionId: String, duration: String, throttling: Option[String] = None)
 case class SuccessfulSubscribe(subscribeResponse: SubscribeResponse)
 
 case class GetErrorCode(code: String, reasonPhrase: String)
@@ -27,7 +27,7 @@ trait FiwareJSONFormatter {
   implicit val validateSubscribeResponseRead: Reads[SubscribeResponse] = (
       (JsPath \ "subscriptionId").read[String] and
       (JsPath \ "duration").read[String] and
-      (JsPath \ "throttling").read[String]
+      (JsPath \ "throttling").readNullable[String]
   )(SubscribeResponse.apply _)
   
   implicit val validateSuccessfulSubscribeRead: Reads[SuccessfulSubscribe] = 
@@ -81,7 +81,7 @@ trait FiwareJSONFormatter {
   implicit val validateSubscribeResponseWrite: Writes[SubscribeResponse] = (
       (JsPath \ "subscriptionId").write[String] and
       (JsPath \ "duration").write[String] and
-      (JsPath \ "throttling").write[String]
+      (JsPath \ "throttling").writeNullable[String]
   )(unlift(SubscribeResponse.unapply))
   
   // see http://stackoverflow.com/questions/14754092/how-to-turn-json-to-case-class-when-case-class-has-only-one-field

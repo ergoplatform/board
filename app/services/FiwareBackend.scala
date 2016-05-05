@@ -343,8 +343,8 @@ class FiwareBackend @Inject()
          "duration" -> "P1M",
          "notifyConditions" -> Json.arr(Json.obj(
              "type" -> "ONCHANGE"
-         )),
-         "throttling" -> "PT1S"
+         ))/*,
+         "throttling" -> "PT1S"*/
      )
    }
    
@@ -415,7 +415,7 @@ class FiwareBackend @Inject()
       val attributes= x.contextElement.attributes flatMap { y =>
           y.value.validate[Post] match {
             case postSuccess: JsSuccess[Post] =>
-              Try { 
+              Try {
                 val post = postSuccess.get
                 // for some reason Fiware doesn't like the '=' character on a String (or \")
                 val messageB64 = post.message.replace('.', '=')
