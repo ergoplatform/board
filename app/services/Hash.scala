@@ -9,7 +9,10 @@ import ch.bfh.unicrypt.helper.converter.classes.biginteger.ByteArrayToBigInteger
 import ch.bfh.unicrypt.helper.converter.classes.string.ByteArrayToString
 import ch.bfh.unicrypt.helper.array.classes.ByteArray;
 import scala.concurrent.{Future, Promise}
+import scala.util.{Try, Success, Failure}
 import scala.collection.mutable
+import scala.concurrent._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 
 class Hash (message: Base64Message) {
@@ -37,45 +40,67 @@ object HashService extends BoardJSONFormatter {
   
   def createHash(post: Post) : Future[Hash] = {
     val promise = Promise[Hash]()
-    postMap.synchronized {
-      val index = post.board_attributes.index.toInt
-      // we already received the previous post, we can calculate the hash
-      if(lastCommitedIndex + 1 == index) {
-        val messageB64 = new Base64Message(Json.stringify(Json.toJson(post)))
-        promise.success(new Hash(lastPostB64 + messageB64))
-      }
-      // the post is out of order, wait till we receive the previous post
-      else if(lastCommitedIndex + 1 < index) {
-        if(postMap.contains(index)) {
-          promise.failure(new Error(s"Post index collision with index: ${index}"))
-        } else {
-          postMap += (index -> (new Base64Message(Json.stringify(Json.toJson(post))), promise))
+    Future {
+      blocking {
+        postMap.synchronized {
+          val index = Try {
+            post.board_attributes.index.toInt
+          } match {
+            case Success(index) =>
+              // we already received the previous post, we can calculate the hash
+              if(lastCommitedIndex + 1 == index) {
+                val messageB64 = new Base64Message(Json.stringify(Json.toJson(post)))
+                promise.success(new Hash(lastPostB64 + messageB64))
+              }
+              // the post is out of order, wait till we receive the previous post
+              else if(lastCommitedIndex + 1 < index) {
+                if(postMap.contains(index)) {
+                  promise.failure(new Error(s"Post index collision with index: ${index}"))
+                } else {
+                  postMap += (index -> (new Base64Message(Json.stringify(Json.toJson(post))), promise))
+                }
+              }
+              // the post received is outdated
+              else {
+                promise.failure(new Error(s"Post index ${index} is outdated. " + 
+                              s"Last post had index ${lastCommitedIndex}"))
+              }
+            case Failure(err) =>
+              promise.failure(err)
+          }
         }
-      } 
-      // the post received is outdated
-      else {
-        promise.failure(new Error(s"Post index ${index} is outdated. " + 
-                      s"Last post had index ${lastCommitedIndex}"))
       }
     }
     promise.future
   }
   // the post has been committed to the immutable log, synchronize futures
-  def commit(post: Post) {
-    var ret = false
-    postMap.synchronized {
-      lastPostB64 = new Base64Message(Json.stringify(Json.toJson(post)))
-      lastCommitedIndex = lastCommitedIndex +1
-      val index = post.board_attributes.index.toInt
-      if(index == lastCommitedIndex + 1) {
-        postMap.get(index) map { r =>
-               r._2.success(new Hash(lastPostB64 + r._1))
-               postMap -= (index)
-               ret = true
-            }
+  def commit(post: Post) : Future[Unit] = {
+    val promise = Promise[Unit]
+    Future {
+      blocking {
+        postMap.synchronized {
+          Try { 
+            post.board_attributes.index.toInt
+          } match {
+            case Success(index) =>
+              if(index == lastCommitedIndex + 1) {
+                lastPostB64 = new Base64Message(Json.stringify(Json.toJson(post)))
+                lastCommitedIndex = index
+                postMap.get(index + 1) map { data =>
+                  data._2.success(new Hash(lastPostB64 + data._1))
+                  //postMap -= (index)  // maybe remove this line?
+                }
+                promise.success({})
+              } else {
+                promise.failure(new Error(s"Hash Service Error: committing message out of order. Last committed post index was: $lastCommitedIndex and the index to commit is $index"))
+              }
+            case Failure(err) =>
+              promise.failure(err)              
+          }
+        }
       }
-    }
-    ret
+   }
+    promise.future
   }
   
 }

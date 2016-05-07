@@ -12,6 +12,7 @@ import scala.concurrent.duration._
 import scala.util.{Success, Failure}
 import models._
 import services.FiwareBackend
+import scala.concurrent._
 
 /**
  * This controller creates an `Action` to handle bulletin post and get operations.
@@ -46,13 +47,19 @@ class BulletinController @Inject()
   (request : Request[AnyContent])
   : Future[Result] = 
   {
-    Logger.info(s"action: Board POST")
-    request.body.asJson match {
-      case Some(json_data) => 
-        json_to_backend_post(json_data)
-      case None => 
-        Future { BadRequest(s"Bad request: not a json or json format error:\n" + request.body) }
+    val promise = Promise[Result]()
+    Future {
+      promise.completeWith {
+        Logger.info(s"action: Board POST")
+        request.body.asJson match {
+          case Some(json_data) => 
+            json_to_backend_post(json_data)
+          case None => 
+            Future { BadRequest(s"Bad request: not a json or json format error:\n" + request.body) }
+        }
+      }
     }
+    promise.future
   }
 
   /**
@@ -63,16 +70,18 @@ class BulletinController @Inject()
   : Future[Result] = 
   {
     val promise: Promise[Result] = Promise[Result]()
-    json.validate[PostRequest] match {
-        case s: JsSuccess[PostRequest] => 
-          backend.Post(s.get) onComplete {
-            case Success(p) => 
-              promise.success( Ok(Json.toJson(p)) );
-            case Failure(e) => 
-              promise.success( BadRequest(s"${getMessageFromThrowable(e)}") )
-          }
-        case e: JsError => 
-          promise.success(BadRequest(s"$e"))
+    Future {
+      json.validate[PostRequest] match {
+          case s: JsSuccess[PostRequest] => 
+            backend.Post(s.get) onComplete {
+              case Success(p) => 
+                promise.success( Ok(Json.toJson(p)) );
+              case Failure(e) => 
+                promise.success( BadRequest(s"${getMessageFromThrowable(e)}") )
+            }
+          case e: JsError => 
+            promise.success(BadRequest(s"$e"))
+      }
     }
     promise.future
   }
@@ -109,17 +118,19 @@ class BulletinController @Inject()
   : Future[Result] = 
   {
     val promise: Promise[Result] = Promise[Result]()
-    // check that the basic elements are there
-    // instead of using json.validate[Post], as many elements are optional
-    json.validate[GetRequest] match { 
-      case s: JsSuccess[GetRequest] => 
-        backend.Get(s.get) onComplete {
-          case Success(p) => 
-            promise.success( Ok(Json.prettyPrint(Json.toJson(p))) )
-          case Failure(e) => 
-            promise.success( BadRequest(getMessageFromThrowable(e)) )
-        }
-      case e: JsError => promise.success( BadRequest(s"$e") )
+    Future {
+      // check that the basic elements are there
+      // instead of using json.validate[Post], as many elements are optional
+      json.validate[GetRequest] match { 
+        case s: JsSuccess[GetRequest] => 
+          backend.Get(s.get) onComplete {
+            case Success(p) => 
+              promise.success( Ok(Json.prettyPrint(Json.toJson(p))) )
+            case Failure(e) => 
+              promise.success( BadRequest(getMessageFromThrowable(e)) )
+          }
+        case e: JsError => promise.success( BadRequest(s"$e") )
+      }
     }
     promise.future
   }
@@ -156,19 +167,21 @@ class BulletinController @Inject()
   : Future[Result] = 
   {
     val promise: Promise[Result] = Promise[Result]()
-    json.validate[SubscribeRequest] match { 
-      case s: JsSuccess[SubscribeRequest] => 
-        backend.Subscribe(s.get) onComplete {
-          case Success(p) => 
-            Logger.info(Json.prettyPrint(Json.toJson(p)))
-            promise.success( Ok(p.subscribeResponse.subscriptionId) )
-          case Failure(e) => 
-            Logger.info(getMessageFromThrowable(e))
-            promise.success( BadRequest(getMessageFromThrowable(e)) )
-        }
-      case e: JsError => 
-        Logger.info(s"$e")
-        promise.success( BadRequest(s"$e") )
+    Future {
+      json.validate[SubscribeRequest] match { 
+        case s: JsSuccess[SubscribeRequest] => 
+          backend.Subscribe(s.get) onComplete {
+            case Success(p) => 
+              Logger.info(Json.prettyPrint(Json.toJson(p)))
+              promise.success( Ok(p.subscribeResponse.subscriptionId) )
+            case Failure(e) => 
+              Logger.info(getMessageFromThrowable(e))
+              promise.success( BadRequest(getMessageFromThrowable(e)) )
+          }
+        case e: JsError => 
+          Logger.info(s"$e")
+          promise.success( BadRequest(s"$e") )
+      }
     }
     promise.future
   }
@@ -184,14 +197,20 @@ class BulletinController @Inject()
    * Check the subscribe request body is in JSON format and pass it to `json_to_backend_get`
    */
   private def process_accumulate_request(request : Request[AnyContent])  : Future[Result] = {
-    Logger.info(s"action: Board ACCUMULATOR")
-    request.body.asJson match {
-      case Some(json_data) =>  json_to_backend_accumulate(json_data)
-      case None => Future {
-        Logger.info(s"Bad request: not a json or json format error:\n${request.body.asRaw}\n")
-        BadRequest(s"Bad request: not a json or json format error:\n${request.body.asRaw}\n")
+    val promise = Promise[Result]()
+    Future {
+      promise.completeWith {
+        Logger.info(s"action: Board ACCUMULATOR")
+        request.body.asJson match {
+          case Some(json_data) =>  json_to_backend_accumulate(json_data)
+          case None => Future {
+            Logger.info(s"Bad request: not a json or json format error:\n${request.body.asRaw}\n")
+            BadRequest(s"Bad request: not a json or json format error:\n${request.body.asRaw}\n")
+          }
+        }
       }
     }
+    promise.future
   }
   
   /**
@@ -199,19 +218,21 @@ class BulletinController @Inject()
    */
   private def json_to_backend_accumulate(json : libs.json.JsValue)  : Future[Result] = {
     val promise: Promise[Result] = Promise[Result]()
-    json.validate[AccumulateRequest] match { 
-      case s: JsSuccess[AccumulateRequest] =>
-        backend.Accumulate(s.get) onComplete {
-          case Success(any) => 
-            Logger.info("Ok()")
-            promise.success( Ok("") )
-          case Failure(e) => 
-            Logger.info("ACCUUMULATE Failure " + getMessageFromThrowable(e))
-            promise.success( BadRequest(getMessageFromThrowable(e)) )
-        }
-      case e: JsError => 
-        Logger.info("ACCUUMULATE JsError " + s"$e")
-        promise.success( BadRequest(s"$e") )
+    Future {
+      json.validate[AccumulateRequest] match { 
+        case s: JsSuccess[AccumulateRequest] =>
+          backend.Accumulate(s.get) onComplete {
+            case Success(any) => 
+              Logger.info("Ok()")
+              promise.success( Ok("") )
+            case Failure(e) => 
+              Logger.info("ACCUUMULATE Failure " + getMessageFromThrowable(e))
+              promise.success( BadRequest(getMessageFromThrowable(e)) )
+          }
+        case e: JsError => 
+          Logger.info("ACCUUMULATE JsError " + s"$e")
+          promise.success( BadRequest(s"$e") )
+      }
     }
     promise.future
   }
