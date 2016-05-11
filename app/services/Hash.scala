@@ -43,7 +43,7 @@ object HashService extends BoardJSONFormatter {
     Future {
       blocking {
         postMap.synchronized {
-          val index = Try {
+          Try {
             post.board_attributes.index.toInt
           } match {
             case Success(index) =>

@@ -127,16 +127,10 @@ class FiwareBackend @Inject()
     }
   }
    
-   def signPost(post: models.Post): models.Post = {
-       Logger.info(s"signPost 0")
-     val message = new Base64Message(Json.stringify(Json.toJson(post)))
-       Logger.info(s"signPost 1")
-     val signature = SchnorrSigningDevice.signString(keyPair, message)
-       Logger.info(s"signPost 2")
-     val verified = signature.verify(message)
-       Logger.info(s"signPost 3")
-     Logger.info(s"Post Verification ${verified}")
-       Logger.info(s"signPost 4")
+   def signPost(post: models.Post, hash: Hash): models.Post = {
+     val signature = SchnorrSigningDevice.signString(keyPair, hash)
+     val verified = signature.verify(hash)
+       Logger.info(s"Post Verification ${verified}")
      val signatureStr = signature.toSignatureString()
      models.Post(
          post.message, 
@@ -144,7 +138,7 @@ class FiwareBackend @Inject()
          models.BoardAttributes(
              post.board_attributes.index, 
              post.board_attributes.timestamp, 
-             post.board_attributes.hash, 
+             hash.toString(), 
              Some(signatureStr)))
    }
    
@@ -161,8 +155,9 @@ class FiwareBackend @Inject()
                  request.user_attributes.pk,
                  None))
          val base64message = new Base64Message(Json.stringify(Json.toJson(leanRequest)))
+         val hash = new Hash(base64message)
          DSASignature.fromSignatureString(signatureStr) match {
-           case Some(signature) => signature.verify(base64message)
+           case Some(signature) => signature.verify(hash)
            case None => false
          }
      }
@@ -177,26 +172,20 @@ class FiwareBackend @Inject()
        Logger.info(s"PostRequest Verification ${verifyPostRequest(request)}")
        // index and timestamp
        val postIndex = index.getAndIncrement()
-       Logger.info(s"PostRequest 0 - $postIndex")
        val timeStamp = System.currentTimeMillis()
-       Logger.info(s"PostRequest 1 - $postIndex")
        // fill in the Post object
        // the message will be encoded with Base64
        val b64 = new Base64Message(request.message)
-       Logger.info(s"PostRequest 2 - $postIndex")
        // for some reason Fiware doesn't like the '=' character on a String (or \")
        val msg = b64.toString().replace('=', '.')
-       Logger.info(s"PostRequest 3 - $postIndex")
        val postNoHash = 
          models.Post(
              msg,
              request.user_attributes, 
              // add board attributes, including index and timestamp
              BoardAttributes(s"$postIndex",s"$timeStamp","",None))
-       Logger.info(s"PostRequest 4 - $postIndex")
        // get hash                      
        val hashFuture = HashService.createHash(postNoHash)
-       Logger.info(s"PostRequest 5 - $postIndex")
        
        hashFuture onFailure {
          case error => 
@@ -206,7 +195,6 @@ class FiwareBackend @Inject()
        
        hashFuture onSuccess {
          case hash =>
-           Logger.info(s"PostRequest 6 - $postIndex")
            val postNotSigned = 
              models.Post(
                msg, 
@@ -215,14 +203,11 @@ class FiwareBackend @Inject()
                BoardAttributes(
                    s"$postIndex",
                    s"$timeStamp",
-                   hash.toString(),
+                   "",
                    None))
-           Logger.info(s"PostRequest 7 - $postIndex")
            // add signature
-           val post = signPost(postNotSigned)
-           Logger.info(s"PostRequest 8 - $postIndex")
+           val post = signPost(postNotSigned, hash)
            val data = fiwarePostQuery(post)
-           Logger.info(s"PostRequest 9 - $postIndex")
            Logger.info(s"POST data:\n$data\n")
            // send HTTP POST message to Fiware-Orion backend
            val futureResponse: Future[WSResponse] = 
@@ -237,7 +222,6 @@ class FiwareBackend @Inject()
            futureResponse onComplete {
              case Success(response) => 
                // this resolves the promise with either success or failure
-               Logger.info(s"PostRequest 10 - $postIndex")
                fiwareParsePostAnswer(response, promise, post)
              case Failure(e) => 
                Logger.info(s"Future failure:\n$e\n")
@@ -281,7 +265,7 @@ class FiwareBackend @Inject()
                         // for some reason Fiware doesn't like the '=' character on a String (or \")
                         val messageB64 = post.message.replace('.', '=')
                         // the message was Base64 encoded so it has to be decoded
-                        val msg =new String(Base64.getDecoder.decode(messageB64), StandardCharsets.UTF_8)
+                        val msg = new String(Base64.getDecoder.decode(messageB64), StandardCharsets.UTF_8)
                         Some(models.Post(msg, post.user_attributes, post.board_attributes))
                       } match {
                         case Success(some) => 

@@ -12,34 +12,34 @@ import ch.bfh.unicrypt.crypto.schemes.encryption.classes.ElGamalEncryptionScheme
 import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModSafePrime
 import ch.bfh.unicrypt.math.algebra.general.interfaces.Element
 
-import ch.bfh.unicrypt.crypto.schemes.signature.classes.SchnorrSignatureScheme;
-import ch.bfh.unicrypt.helper.math.Alphabet;
-import ch.bfh.unicrypt.math.algebra.concatenative.classes.StringElement;
-import ch.bfh.unicrypt.math.algebra.concatenative.classes.StringMonoid;
-import ch.bfh.unicrypt.math.algebra.general.classes.BooleanElement;
-import ch.bfh.unicrypt.math.algebra.general.classes.Pair;
-import ch.bfh.unicrypt.math.algebra.general.classes.Tuple;
-import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModElement;
-import java.security.interfaces.DSAPrivateKey;
-import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModPrime;
-import java.security.KeyPair;
+import ch.bfh.unicrypt.crypto.schemes.signature.classes.SchnorrSignatureScheme
+import ch.bfh.unicrypt.helper.math.Alphabet
+import ch.bfh.unicrypt.math.algebra.concatenative.classes.StringElement
+import ch.bfh.unicrypt.math.algebra.concatenative.classes.StringMonoid
+import ch.bfh.unicrypt.math.algebra.general.classes.BooleanElement
+import ch.bfh.unicrypt.math.algebra.general.classes.Pair
+import ch.bfh.unicrypt.math.algebra.general.classes.Tuple
+import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModElement
+import java.security.interfaces.DSAPrivateKey
+import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModPrime
+import java.security.KeyPair
 import java.security.KeyPairGenerator;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.security.interfaces.DSAParams;
-import java.security.interfaces.DSAPrivateKey;
-import java.security.interfaces.DSAPublicKey;
-import java.security.spec.DSAPrivateKeySpec;
-import java.security.spec.DSAPublicKeySpec;
-import java.security.spec.KeySpec;
-import java.security.KeyFactory;
+import java.security.PrivateKey
+import java.security.PublicKey
+import java.security.interfaces.DSAParams
+import java.security.interfaces.DSAPrivateKey
+import java.security.interfaces.DSAPublicKey
+import java.security.spec.DSAPrivateKeySpec
+import java.security.spec.DSAPublicKeySpec
+import java.security.spec.KeySpec
+import java.security.KeyFactory
 import java.nio.charset.StandardCharsets
 import ch.bfh.unicrypt.math.algebra.dualistic.classes.ZModElement;
 import ch.bfh.unicrypt.math.algebra.dualistic.classes.ZModPrime;
-import java.math.BigInteger;
+import java.math.BigInteger
 import play.api.libs.json._
 import scala.util.{Try, Success, Failure}
-import models._;
+import models._
 
 case class DSASignature 
 (signerPK: DSAPublicKey, 
@@ -67,7 +67,7 @@ extends BoardJSONFormatter
                 signature.getFirst().getSet().getZModOrder().getModulus().toString()))
   }  
   
-  def verify(base64message: Base64Message) : Boolean = {
+  def verify(hash: Hash) : Boolean = {
     // group
     val g_q = GStarModPrime.getInstance(
         signerPK.getParams().getP(), 
@@ -79,7 +79,7 @@ extends BoardJSONFormatter
     // message in Element format
     val messageElement = 
       schnorr.getMessageSpace()
-      .getElementFrom(base64message.getBigInteger())
+      .getElementFrom(new BigInteger(hash.toString().getBytes(StandardCharsets.UTF_8)))
     // verify
     schnorr.verify(
         signaturePK, 
@@ -91,36 +91,32 @@ extends BoardJSONFormatter
 object SchnorrSigningDevice {  
   def  signString
   (keypair: KeyPair, 
-   base64message: Base64Message) 
+   hash: Hash) 
   : DSASignature = 
   {
-     // private key
-     val dsaPrivateKey = keypair.getPrivate().asInstanceOf[DSAPrivateKey]
-     val dsaPublicKey = keypair.getPublic().asInstanceOf[DSAPublicKey]
-     
-     val pair = new KeyPair(dsaPublicKey, dsaPrivateKey)
+    val dsaPrivateKey = keypair.getPrivate().asInstanceOf[DSAPrivateKey]
      // group
-     val g_q = GStarModPrime.getInstance(
+    val g_q = GStarModPrime.getInstance(
          dsaPrivateKey.getParams().getP(), 
          dsaPrivateKey.getParams().getQ())
      val g = g_q.getElement(dsaPrivateKey.getParams().getG())
      // Schnorr signature scheme
-     val schnorr = SchnorrSignatureScheme.getInstance(
-         StringMonoid.getInstance(Alphabet.BASE64), g);
+    val schnorr = SchnorrSignatureScheme.getInstance(
+         StringMonoid.getInstance(Alphabet.BASE64), g)
      // message in Element format
-     val message = 
+    val foo = new BigInteger(hash.toString().getBytes(StandardCharsets.UTF_8))
+    val message = 
        schnorr.getMessageSpace()
-       .getElementFrom(base64message.getBigInteger())
+       .getElementFrom(foo)
      // signature keys
-		 val keyPair = schnorr.getKeyPairGenerator().generateKeyPair()
-		 val privateKey = keyPair.getFirst()
-		 val publicKey = keyPair.getSecond()
+    val keyPair = schnorr.getKeyPairGenerator().generateKeyPair()
+    val privateKey = keyPair.getFirst()
 		 // signature
-		 val signature : Pair = schnorr.sign(privateKey, message)
-		 
-		 new DSASignature(
-		     dsaPublicKey, 
-		     publicKey.asInstanceOf[GStarModElement], 
+    val signature : Pair = schnorr.sign(privateKey, message)
+    
+    new DSASignature(
+		     keypair.getPublic().asInstanceOf[DSAPublicKey], 
+		     keyPair.getSecond().asInstanceOf[GStarModElement], 
 		     signature)
   }
 }
