@@ -24,4 +24,8 @@ trait BoardBackend {
    * `Accumulate` operation
    */
   def Accumulate(request: AccumulateRequest): Future[JsValue]
+  /**
+   * `Unsubscribe` operation
+   */
+  def Unsubscribe(request: UnsubscribeRequest): Future[Unit]
 }

@@ -479,7 +479,7 @@ class FiwareBackend @Inject()
       case Some(err) =>
         throw new Error(err)
       case None =>
-        AccumulateRequest(request.originator, request.subscriptionId, contextResponses)
+        AccumulateRequest(request.subscriptionId, request.originator, contextResponses)
     }
   }
   
@@ -533,5 +533,12 @@ class FiwareBackend @Inject()
     promise.future
   }
   
+  
+   /**
+   * `Unsubscribe` operation
+   */
+  def Unsubscribe(request: UnsubscribeRequest) : Future[Unit] = {
+    removeSubscription(request.subscriptionId, request.reference)
+  }
   
 }

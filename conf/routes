@@ -92,3 +92,6 @@ POST     /bulletin_subscribe                    controllers.BulletinController.s
 #     description: OK
 ###
 POST     /bulletin_accumulate                    controllers.BulletinController.accumulate
+
+
+POST     /bulletin_unsubscribe                    controllers.BulletinController.unsubscribe

@@ -226,12 +226,51 @@ class BulletinController @Inject()
               Logger.info("Ok()")
               promise.success( Ok("") )
             case Failure(e) => 
-              Logger.info("ACCUUMULATE Failure " + getMessageFromThrowable(e))
+              Logger.info("ACCUMULATE Failure " + getMessageFromThrowable(e))
               promise.success( BadRequest(getMessageFromThrowable(e)) )
           }
         case e: JsError => 
-          Logger.info("ACCUUMULATE JsError " + s"$e")
+          Logger.info("ACCUMULATE JsError " + s"$e")
           promise.success( BadRequest(s"$e") )
+      }
+    }
+    promise.future
+  }
+  
+  /**
+   * Create asynchronous `Action` to send a Unsubscribe operation to the backend
+   */
+  def unsubscribe = Action.async { 
+    request => process_unsubscribe_request(request)
+  }
+  
+  /**
+   * Check the unsubscribe request body is in JSON format and call the backend's unsubscribe
+   */
+  private def process_unsubscribe_request(request : Request[AnyContent])  : Future[Result] = {
+    val promise = Promise[Result]()
+    Future {
+      Logger.info(s"action: Board UNSUBSCRIBE")
+      request.body.asJson match {
+        case Some(json_data) =>  
+          json_data.validate[UnsubscribeRequest] match { 
+            case s: JsSuccess[UnsubscribeRequest] =>
+              backend.Unsubscribe(s.get) onComplete {
+                case Success(any) => 
+                  Logger.info("Ok()")
+                  promise.success(Ok(""))
+                case Failure(e) => 
+                  Logger.info("UNSUBSCRIBE Failure " + getMessageFromThrowable(e))
+                  promise.success(BadRequest(getMessageFromThrowable(e)))
+              }
+            case e: JsError => 
+              Logger.info("UNSUBSCRIBE JsError " + s"$e")
+              promise.success(BadRequest(s"$e"))
+          }
+        case None => Future {
+          Logger.info(s"Bad request: not a json or json format error:\n${request.body.asRaw}\n")
+          promise.success(BadRequest(s"Bad request: not a json or json format error:\n${request.body.asRaw}\n"))
+        }
       }
     }
     promise.future
