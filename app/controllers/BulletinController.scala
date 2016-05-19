@@ -75,7 +75,7 @@ class BulletinController @Inject()
           case s: JsSuccess[PostRequest] => 
             backend.Post(s.get) onComplete {
               case Success(p) => 
-                promise.success( Ok(Json.toJson(p)) );
+                promise.success( Ok(Json.toJson(p)) )
               case Failure(e) => 
                 promise.success( BadRequest(s"${getMessageFromThrowable(e)}") )
             }

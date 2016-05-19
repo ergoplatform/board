@@ -47,7 +47,6 @@ import play.api.Logger
 import models._
 import scala.util.{Try, Success, Failure}
 import scala.concurrent.{Future, Promise}
-import scala.concurrent.ExecutionContext.Implicits.global
 
 /** This class implements the BoardBackend and connects to the Fiware-orion
  * context-broker backend.
@@ -173,6 +172,7 @@ class FiwareBackend @Inject()
        // index and timestamp
        val postIndex = index.getAndIncrement()
        val timeStamp = System.currentTimeMillis()
+       Logger.info(s"POST data:\n${Json.stringify(Json.toJson(request))}\n")
        // fill in the Post object
        // the message will be encoded with Base64
        val b64 = new Base64Message(request.message)
@@ -208,7 +208,7 @@ class FiwareBackend @Inject()
            // add signature
            val post = signPost(postNotSigned, hash)
            val data = fiwarePostQuery(post)
-           Logger.info(s"POST data:\n$data\n")
+           //Logger.info(s"POST data:\n$data\n")
            // send HTTP POST message to Fiware-Orion backend
            val futureResponse: Future[WSResponse] = 
            ws.url(s"http://${configuration.fiware.addressPort}/v1/updateContext")
@@ -491,7 +491,7 @@ class FiwareBackend @Inject()
         case Some(reference) =>  
         Logger.info(s"subscriptionId: ${request.subscriptionId}, " +
                  s"reference: ${reference}")
-          Logger.info(s"ACCUMULATE data:\n${request}\n")
+          //Logger.info(s"ACCUMULATE data:\n${request}\n")
           val futureDecode = decodeAccumulate(request)
           
           futureDecode onComplete {

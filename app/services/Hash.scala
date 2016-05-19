@@ -12,7 +12,9 @@ import scala.concurrent.{Future, Promise}
 import scala.util.{Try, Success, Failure}
 import scala.collection.mutable
 import scala.concurrent._
-import scala.concurrent.ExecutionContext.Implicits.global
+//import scala.concurrent.ExecutionContext.Implicits.global
+import akka.actor.ActorSystem
+import akka.stream.{ActorMaterializer, Materializer}
 
 
 class Hash (message: Base64Message) {
@@ -34,6 +36,9 @@ class Hash (message: Base64Message) {
 }
 
 object HashService extends BoardJSONFormatter {
+  implicit val system = ActorSystem()
+  implicit val executor = system.dispatchers.lookup("my-other-dispatcher")
+  implicit val materializer = ActorMaterializer()
   private var postMap = Map[Int, Tuple2[Base64Message,Promise[Hash]]]()
   private var lastCommitedIndex: Int = -1
   private var lastPostB64: Base64Message = new Base64Message("")

@@ -59,12 +59,13 @@ extends BoardJSONFormatter
             signerPK.getY().toString(),
             signerPK.getParams().getP().toString(),
             signerPK.getParams().getQ().toString(),
-            signerPK.getParams().getG().toString()), 
-            signaturePK.convertToString(), 
-            SignatureElements(
-                signature.getFirst().convertToBigInteger().toString(), 
-                signature.getSecond().convertToBigInteger().toString(),
-                signature.getFirst().getSet().getZModOrder().getModulus().toString()))
+            signerPK.getParams().getG().toString()
+        ), 
+        signaturePK.convertToString(), 
+        SignatureElements(
+            signature.getFirst().convertToBigInteger().toString(), 
+            signature.getSecond().convertToBigInteger().toString(),
+            signature.getFirst().getSet().getZModOrder().getModulus().toString()))
   }  
   
   def verify(hash: Hash) : Boolean = {
