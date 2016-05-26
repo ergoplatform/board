@@ -150,7 +150,7 @@ class BulletinController @Inject()
   (request : Request[AnyContent])  
   : Future[Result] = 
   {
-    Logger.info(s"action: Board SUBSCRIBE")
+    Logger.info(s"action: Board SUBSCRIBE, remoteAddress: " + request.remoteAddress)
     request.body.asJson match {
       case Some(json_data) => 
         json_to_backend_subscribe(json_data)
@@ -163,7 +163,7 @@ class BulletinController @Inject()
    * Validate JSON, convert it to a Post, and send it to the `BoardBackend` Get interface
    */
   private def json_to_backend_subscribe
-  (json : libs.json.JsValue)  
+  (json : libs.json.JsValue)
   : Future[Result] = 
   {
     val promise: Promise[Result] = Promise[Result]()

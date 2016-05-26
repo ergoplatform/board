@@ -368,7 +368,7 @@ class FiwareBackend @Inject()
        response: WSResponse, 
        promise: Promise[SuccessfulSubscribe], 
        reference: String
-   ) 
+   )
    {
      Try(response.json) match {
        case Success(json) => 
