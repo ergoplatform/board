@@ -1,0 +1,135 @@
+Steps to configure sandbox demo:
+
+First follow the steps in the following tutorial to configure an agora/auth1/auth2. Here it is assumed that the main folder will be located on /agora.
+
+https://github.com/agoravoting/agora-dev-box/blob/next/doc/devel_deployment.md
+
+Enter on the admin webpage and create/start an election. Note down the id. Also add at least one user and send the auth codes. Check for the auth codes in sentry. If you don't see the AgoraVoting org in sentry, click on the right center where it says "AuthApi/AgoraVoting" under the "Projects" box. Note down the auth code and url, it should be something like:
+
+Vote in https://agora/election/3/public/login/felrobelv@gmail.com with code 78F4DPRW
+
+Now modify the agora machine to redirect the elections/api requests to sandbox:
+
+$ cd /agora/agora
+$ vagrant ssh
+$ sudo vim /etc/nginx/conf.d/agora-elections.conf
+
+The agora-elections.conf file should be modified so that it looks like this:
+
+
+        location / {
+                proxy_pass          http://192.168.50.1:9858;
+                proxy_set_header    X-Forwarded-For $remote_addr;
+        }
+
+
+save the file ( :wq ) and then:
+
+$ sudo service nginx restart
+$ exit
+
+That's all the configuration you have to do on the agora machine.
+
+In the host machine, on the folder /agora, clone the github projects agora-board and sandbox:
+
+$ cd /agora
+$ git clone https://github.com/agoravoting/sandbox.git
+$ git clone https://github.com/agoravoting/agora-board.git
+
+you need to install sbt, lightbend activator, and  rng-tools:
+
+http://www.scala-sbt.org/
+https://www.lightbend.com/activator/download
+
+I normally have the sbt and activator on ~/app/ and configure ./bashrc to have sbt and activator bins on $PATH
+
+Also, don't forget:
+
+$ sudo apt-get install rng-tools
+
+You also need to have a /agora/sandbox/libsigar-amd64-linux.so Download the latest libsigar (yest, it's 1.6.4 from 2012) zip from the following url, unzip the zip file and copy the libsigar-amd64-linux.so to /agora/sandbox/
+https://sourceforge.net/projects/sigar/files/
+
+Normally you would also use the Eclipse for scala. I also copy it to ~/app/ :
+http://scala-ide.org/download/sdk.html
+
+If you want to open the sandbox and agora-board projects on scala-eclipse IDE, you have to create the eclipse projects:
+$ cd /agora/sandbox && sbt eclipse
+$ cd /agora/agora-board && activator eclipse
+
+Then just import the projects in eclipse
+
+Copy the shell scripts on sandbox to the root sandbox folder:
+
+$ cd /agora/sandbox && cp src/main/shell/*.sh . && chmod +x *.sh
+
+Configure the PEM cert file used by the agora machine. Enter for example on https://agora/admin/login with a browser, add the cert exception if required, and export the certificate authority of the webpage in PEM format saving it as /agora/agora-board/conf/agora-server.crt
+
+Install docker and docker-compose on the host machine following the guide:
+https://docs.docker.com/compose/install/
+
+Compile the projects:
+
+$ cd /agora/agora-board/
+$ activator compile
+
+$ cd /agora/sandbox
+$ sbt compile && sbt assembly
+
+Now we can run the demo. Open 5 terminals:
+
+Terminal 1:
+
+$ cd /agora/agora-board/conf
+$ sudo docker-compose up
+
+Terminal 2:
+
+$ cd /agora/agora-board/
+$ activator run
+
+Terminal 3
+
+$ cd /agora/sandbox
+$ sbt assembly
+$ ./director.sh
+
+Terminal 4
+
+$ cd /agora/sandbox
+$ ./auth1.sh
+
+Terminal 5
+
+$ cd /agora/sandbox
+$ ./auth2.sh
+
+If you need to rerun the demo, on terminal 1 do:
+$ sudo docker-compose stop
+$ sudo docker-compose rm -f
+$ sudo docker-compose up
+and on the other terminals simply do exactly the same
+
+Now you should be able to vote entering on the url you noted down with the auth code:
+
+https://agora/election/3/public/login/felrobelv@gmail.com with code 78F4DPRW
+
+When that webpage is successfully loaded, a GET to the url https://agora/elections/api/election/3 will be processed by the director on terminal 3, with output similar to:
+
+    Router /api/election/3
+
+Also when ballot is successfully casted, a POST to url https://agora/elections/api/election/3/voter/b31a24a7e75fb324b23069b0150f will be processed by the director on terminal 3, with output similar to:
+
+    Router /api/election/3/voter/b31a24a7e75fb324b23069b0150f
+    addVote HMac check : true
+    +GG VotesToPostRequest: 
+    GG accumulate
+    GG PostOffice::add
+    GG PostOffice::remove
+    GG ElectionStateMaintainer:push
+    GG ElectionStateMaintainer::pushVotes
+    GG ElectionSubscriber::pull electionType app.Election[shapeless.nat._2,app.Votes[0]]
+    GG ElectionStateMaintainer::addVotes
+    GG ElectionSubscriber::push electionType app.Election[shapeless.nat._2,app.Votes[1]] uid 3
+
+Note: This demo is hardcoded to create 4 elections with ids 0 to 3 (see sandbox/src/main/scala/Demo.scala line 70)
