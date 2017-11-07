@@ -17,21 +17,14 @@
 
 package services
 
-import play.api.libs.json._
 import models._
 import ch.bfh.unicrypt.helper.hash.HashAlgorithm
 import ch.bfh.unicrypt.helper.hash.HashMethod
 import ch.bfh.unicrypt.helper.converter.classes.bytearray.StringToByteArray
-import ch.bfh.unicrypt.helper.converter.classes.biginteger.ByteArrayToBigInteger
 import ch.bfh.unicrypt.helper.converter.classes.string.ByteArrayToString
-import ch.bfh.unicrypt.helper.array.classes.ByteArray;
 import scala.concurrent.{Future, Promise}
 import scala.util.{Try, Success, Failure}
-import scala.collection.mutable
 import scala.concurrent._
-//import scala.concurrent.ExecutionContext.Implicits.global
-import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, Materializer}
 
 
 class Hash (message: Base64Message) {

@@ -17,44 +17,21 @@
 
 package services
 
-import java.util.concurrent.atomic.AtomicLong
-import javax.inject._
-import ch.bfh.unicrypt.helper.hash.HashAlgorithm
-import ch.bfh.unicrypt.helper.hash.HashMethod
-import ch.bfh.unicrypt.helper.converter.classes.bytearray.StringToByteArray
-import ch.bfh.unicrypt.helper.converter.classes.biginteger.ByteArrayToBigInteger
-import ch.bfh.unicrypt.helper.converter.classes.string.ByteArrayToString
-import ch.bfh.unicrypt.helper.array.classes.ByteArray;
-import ch.bfh.unicrypt.crypto.schemes.encryption.classes.ElGamalEncryptionScheme
 import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModSafePrime
-import ch.bfh.unicrypt.math.algebra.general.interfaces.Element
-
 import ch.bfh.unicrypt.crypto.schemes.signature.classes.SchnorrSignatureScheme
 import ch.bfh.unicrypt.helper.math.Alphabet
-import ch.bfh.unicrypt.math.algebra.concatenative.classes.StringElement
 import ch.bfh.unicrypt.math.algebra.concatenative.classes.StringMonoid
-import ch.bfh.unicrypt.math.algebra.general.classes.BooleanElement
 import ch.bfh.unicrypt.math.algebra.general.classes.Pair
-import ch.bfh.unicrypt.math.algebra.general.classes.Tuple
 import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModElement
-import java.security.interfaces.DSAPrivateKey
 import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModPrime
 import java.security.KeyPair
-import java.security.KeyPairGenerator;
-import java.security.PrivateKey
-import java.security.PublicKey
-import java.security.interfaces.DSAParams
 import java.security.interfaces.DSAPrivateKey
 import java.security.interfaces.DSAPublicKey
-import java.security.spec.DSAPrivateKeySpec
 import java.security.spec.DSAPublicKeySpec
-import java.security.spec.KeySpec
 import java.security.KeyFactory
 import java.nio.charset.StandardCharsets
-import ch.bfh.unicrypt.math.algebra.dualistic.classes.ZModElement;
-import ch.bfh.unicrypt.math.algebra.dualistic.classes.ZModPrime;
+import ch.bfh.unicrypt.math.algebra.dualistic.classes.ZModPrime
 import java.math.BigInteger
-import play.api.libs.json._
 import scala.util.{Try, Success, Failure}
 import models._
 
