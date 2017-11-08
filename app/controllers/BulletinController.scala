@@ -45,7 +45,7 @@ class BulletinController @Inject()
   (actorSystem: ActorSystem)
   (backend: BoardBackend)
   (implicit exec: ExecutionContext) 
-  extends Controller 
+  extends InjectedController
   with BoardJSONFormatter
   with FiwareJSONFormatter
   with ErrorProcessing

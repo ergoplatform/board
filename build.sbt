@@ -19,17 +19,22 @@ version := "1.0-SNAPSHOT"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
-scalaVersion := "2.11.7"
+scalaVersion := "2.12.4"
 
 resolvers += Resolver.jcenterRepo
 
+resolvers += Resolver.sonatypeRepo("releases")
+
 libraryDependencies ++= Seq(
   jdbc,
-  cache,
+  ehcache,
+  guice,
   ws,
-  "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.0-RC1" % Test,
-  "com.iheart" %% "play-swagger" % "0.2.2-PLAY2.5",
-  "org.webjars" % "swagger-ui" % "2.1.4"
+  "com.typesafe.play" %% "play-json" % "2.6.7",
+  "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % Test,
+  "com.iheart" %% "play-swagger" % "0.7.1",
+  "org.webjars" % "swagger-ui" % "3.2.0",
+  "org.scorexfoundation" %% "scrypto" % "2.0.3"
 )
 
 resolvers += "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases"

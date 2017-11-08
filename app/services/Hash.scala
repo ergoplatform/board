@@ -17,13 +17,17 @@
 
 package services
 
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
 import models._
 import ch.bfh.unicrypt.helper.hash.HashAlgorithm
 import ch.bfh.unicrypt.helper.hash.HashMethod
 import ch.bfh.unicrypt.helper.converter.classes.bytearray.StringToByteArray
 import ch.bfh.unicrypt.helper.converter.classes.string.ByteArrayToString
+import play.api.libs.json.Json
+
 import scala.concurrent.{Future, Promise}
-import scala.util.{Try, Success, Failure}
+import scala.util.{Failure, Success, Try}
 import scala.concurrent._
 
 
