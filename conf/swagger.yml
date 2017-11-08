@@ -19,7 +19,7 @@
     title: "Agora-Board"
     description: "Public Bulletin Board with Fiware-Orion Backend"
     version: "1.0.0"
-  host: localhost:9000
+  host: localhost:9258
   schemes:
     - "http"
   produces: 

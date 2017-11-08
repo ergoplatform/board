@@ -25,6 +25,10 @@ resolvers += Resolver.jcenterRepo
 
 resolvers += Resolver.sonatypeRepo("releases")
 
+resolvers += Resolver.sonatypeRepo("snapshots")
+
+resolvers += "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases"
+
 libraryDependencies ++= Seq(
   jdbc,
   ehcache,
@@ -37,8 +41,6 @@ libraryDependencies ++= Seq(
   "org.scorexfoundation" %% "scrypto" % "2.0.3"
 )
 
-resolvers += "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases"
-
 PlayKeys.devSettings := Seq("play.server.http.port" -> "9258", "play.server.http.address" -> "0:0:0:0:0:0:0:0")
 
-fork in run := false
+fork in run := true
