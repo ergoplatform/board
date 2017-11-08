@@ -21,8 +21,14 @@ import java.util.concurrent.atomic.AtomicLong
 import java.security.KeyPairGenerator
 import java.util.Base64
 import java.nio.charset.StandardCharsets
+import javax.inject.{Inject, Singleton}
+
 import models._
-import scala.util.{Try, Success, Failure}
+import play.api.Logger
+import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
+import play.api.libs.ws.{WSClient, WSResponse}
+
+import scala.util.{Failure, Success, Try}
 import scala.concurrent.{Future, Promise}
 
 /** This class implements the BoardBackend and connects to the Fiware-orion
@@ -81,11 +87,11 @@ class FiwareBackend @Inject()
       case Success(json) => 
         val jsonStr = Json.stringify(json)
         json.validate[SuccessfulGetPost] match {
-          case s: JsSuccess[SuccessfulGetPost] => 
-            Logger.info(s"Future success:\n${jsonStr}\n")
+          case _: JsSuccess[SuccessfulGetPost] =>
+            Logger.info(s"Future success:\n$jsonStr\n")
             // commit the last post to the hash service
             HashService.commit(post) onComplete {
-              case Success(commited) =>
+              case Success(_) =>
                 promise.success(post.board_attributes)
               case Failure(err) =>
                 promise.failure(err)
@@ -93,11 +99,11 @@ class FiwareBackend @Inject()
             // only for testing, normally all post calls should increment
             //index.incrementAndGet()
             //promise.success(post.board_attributes)
-          case e: JsError => 
-            Logger.info(s"Future failure:\n${jsonStr}\n")
-            promise.failure(new Error(s"${jsonStr}"))
+          case _: JsError =>
+            Logger.info(s"Future failure:\n$jsonStr\n")
+            promise.failure(new Error(s"$jsonStr"))
         }
-      case Failure(error) =>
+      case Failure(_) =>
         Logger.info(s"Future failure:\n${response.body}\n")
         promise.failure(new Error(s"${response.body}"))
     }
@@ -106,7 +112,7 @@ class FiwareBackend @Inject()
    def signPost(post: models.Post, hash: Hash): models.Post = {
      val signature = SchnorrSigningDevice.signString(keyPair, hash)
      val verified = signature.verify(hash)
-       Logger.info(s"Post Verification ${verified}")
+       Logger.info(s"Post Verification $verified")
      val signatureStr = signature.toSignatureString()
      models.Post(
          post.message, 
@@ -163,47 +169,45 @@ class FiwareBackend @Inject()
              BoardAttributes(s"$postIndex",s"$timeStamp","",None))
        // get hash                      
        val hashFuture = HashService.createHash(postNoHash)
-       
-       hashFuture onFailure {
-         case error => 
-           Logger.info(s"hashing error:\n$error\n")
-           promise.failure(new Error(s"Hashing error : $error"))
-       }
-       
-       hashFuture onSuccess {
-         case hash =>
-           val postNotSigned = 
+
+       hashFuture onComplete {
+         case Success(hash) => {
+           val postNotSigned =
              models.Post(
-               msg, 
-               request.user_attributes, 
+               msg,
+               request.user_attributes,
                // add hash
                BoardAttributes(
-                   s"$postIndex",
-                   s"$timeStamp",
-                   "",
-                   None))
+                 s"$postIndex",
+                 s"$timeStamp",
+                 "",
+                 None))
            // add signature
            val post = signPost(postNotSigned, hash)
            val data = fiwarePostQuery(post)
            //Logger.info(s"POST data:\n$data\n")
            // send HTTP POST message to Fiware-Orion backend
-           val futureResponse: Future[WSResponse] = 
+           val futureResponse: Future[WSResponse] =
            ws.url(s"http://${configuration.fiware.addressPort}/v1/updateContext")
-           .withHeaders(
+             .addHttpHeaders(
                "Content-Type" -> "application/json",
                "Accept" -> "application/json",
-               "Fiware-ServicePath" -> 
+               "Fiware-ServicePath" ->
                  s"/${post.user_attributes.section}/${post.user_attributes.group}")
-           .post(data)
+             .post(data)
            // Interpret HTTP POST answer
            futureResponse onComplete {
-             case Success(response) => 
+             case Success(response) =>
                // this resolves the promise with either success or failure
                fiwareParsePostAnswer(response, promise, post)
-             case Failure(e) => 
+             case Failure(e) =>
                Logger.info(s"Future failure:\n$e\n")
                promise.failure(e)
            }
+         }
+         case Failure(error) =>
+           Logger.info(s"hashing error:\n$error\n")
+           promise.failure(new Error(s"Hashing error : $error"))
        }
      }
      promise.future
@@ -231,11 +235,11 @@ class FiwareBackend @Inject()
      Try(response.json) match {
        case Success(json) => 
          json.validate[SuccessfulGetPost] match {
-          case s: JsSuccess[SuccessfulGetPost] => 
+          case s: JsSuccess[SuccessfulGetPost] =>
             var hasMapError : Option[String] = None
             // Map attribute.value to Post
             val postList: Seq[Post] = s.get.contextResponses.flatMap(
-                _.contextElement.attributes(0).value.validate[Post] match {
+                _.contextElement.attributes.head.value.validate[Post] match {
                     case sp: JsSuccess[Post] =>
                       Try {
                         val post = sp.get
@@ -269,20 +273,20 @@ class FiwareBackend @Inject()
             hasMapError match {
             // If there was any error, resolve the promise with a failure
               case Some(err) =>
-                Logger.info(s"Future failure:\n${json}\nError: $err")
+                Logger.info(s"Future failure:\n$json\nError: $err")
                 promise.failure(new Error(err))
             // Otherwise return the Get results as a list of Post messages
               case None =>
-                Logger.info(s"Future success:\n${json}\n")
+                Logger.info(s"Future success:\n$json\n")
                 promise.success(postList)
             }
           // The Fiware-Orion backend returned an error message
-          case e: JsError =>
+          case _: JsError =>
             val responseStr = Json.prettyPrint(json)
-            Logger.info(s"Future failure:\n${responseStr}\n")
+            Logger.info(s"Future failure:\n$responseStr\n")
             promise.failure(new Error(responseStr))
         }
-       case Failure(error) => 
+       case Failure(_) =>
          Logger.info(s"Future failure:\n${response.body}\n")
          promise.failure(new Error(response.body))
      }
@@ -300,9 +304,10 @@ class FiwareBackend @Inject()
        // send HTTP POST message to Fiware-Orion backend
        val futureResponse: Future[WSResponse] = 
        ws.url(s"http://${configuration.fiware.addressPort}/v1/queryContext")
-       .withHeaders("Content-Type" -> "application/json",
-                   "Accept" -> "application/json",
-                   "Fiware-ServicePath" -> s"/${post.section}/${post.group}")
+       .addHttpHeaders(
+         "Content-Type" -> "application/json",
+         "Accept" -> "application/json",
+         "Fiware-ServicePath" -> s"/${post.section}/${post.group}")
        .post(data)
        // Interpret HTTP POST answer
        futureResponse onComplete {
@@ -351,17 +356,17 @@ class FiwareBackend @Inject()
        case Success(json) => 
          json.validate[SuccessfulSubscribe] match {
            case s: JsSuccess[SuccessfulSubscribe] => 
-             Logger.info(s"Subscribe: adding subscription Id: ${s.get.subscribeResponse.subscriptionId} with reference: ${reference}")
+             Logger.info(s"Subscribe: adding subscription Id: ${s.get.subscribeResponse.subscriptionId} with reference: $reference")
              addSubscription(s.get.subscribeResponse.subscriptionId, reference)
              promise.success(s.get)
            // The Fiware-Orion backend returned an error message with json format
-           case e: JsError => 
+           case _: JsError =>
              val responseStr = Json.prettyPrint(json)
-             Logger.info(s"Future failure:\n${responseStr}\n")
+             Logger.info(s"Future failure:\n$responseStr\n")
              promise.failure(new Error(responseStr))
          }
        // The Fiware-Orion backend returned an error message
-       case Failure(error) =>
+       case Failure(_) =>
          Logger.info(s"Future failure:\n${response.body}\n")
          promise.failure(new Error(response.body))
      }
@@ -381,9 +386,10 @@ class FiwareBackend @Inject()
       // send HTTP POST message to Fiware-Orion backend
       val futureResponse: Future[WSResponse] = 
       ws.url(s"http://${configuration.fiware.addressPort}/v1/subscribeContext")
-      .withHeaders("Content-Type" -> "application/json",
-                  "Accept" -> "application/json",
-                  "Fiware-ServicePath" -> path)
+      .addHttpHeaders(
+        "Content-Type" -> "application/json",
+        "Accept" -> "application/json",
+        "Fiware-ServicePath" -> path)
       .post(data)
       // Interpret HTTP POST answer
       futureResponse onComplete {
@@ -430,8 +436,8 @@ class FiwareBackend @Inject()
                           s"a valid Post: ${y.value}!\nError: $err"
                   Logger.info(str)
                   parseError = parseError match {
-                    case Some(err) =>
-                      Some(err +"\n" + str)
+                    case Some(error) =>
+                      Some(error +"\n" + str)
                     case None =>
                       Some(str)
                   }
@@ -467,7 +473,7 @@ class FiwareBackend @Inject()
       getSubscription(request.subscriptionId) match {
         case Some(reference) =>  
         Logger.info(s"subscriptionId: ${request.subscriptionId}, " +
-                 s"reference: ${reference}")
+                 s"reference: $reference")
           //Logger.info(s"ACCUMULATE data:\n${request}\n")
           val futureDecode = decodeAccumulate(request)
           
@@ -475,8 +481,9 @@ class FiwareBackend @Inject()
             case Success(decoded) => 
               // send HTTP POST message to the reference
               val futureResponse: Future[WSResponse] = ws.url(reference)
-              .withHeaders("Content-Type" -> "application/json",
-                           "Accept" -> "application/json")
+              .addHttpHeaders(
+                "Content-Type" -> "application/json",
+                "Accept" -> "application/json")
               .post(Json.toJson(decoded))
                
               // Interpret HTTP POST answer

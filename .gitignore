@@ -3,9 +3,10 @@ target
 /.idea
 /.idea_modules
 *.iml
-#/.classpath
+/.classpath
 /project/project
 /project/target
-#/.settings
+/.settings
+/.project
 /RUNNING_PID
 /bin/

@@ -30,7 +30,7 @@ Agora Board has three different layers. The intermediate layer is a Generic Publ
 
 The lowest API is the FIWARE Orion Context Broker and you can find their API documentation on [their repository](https://github.com/telefonicaid/fiware-orion/).
 
-The Board and Elections Machine APIs are documented using Swagger and can be viewed building the project and going to [http://localhost:9000/docs/swagger-ui/index.html?url=/docs/swagger.json#!/routes/get_docs_swagger_json](http://localhost:9000/docs/swagger-ui/index.html?url=/docs/swagger.json#!/routes/get_docs_swagger_json)
+The Board and Elections Machine APIs are documented using Swagger and can be viewed building the project and going to [http://localhost:9258/docs/swagger-ui/index.html?url=/docs/swagger.json#!/routes/get_docs_swagger_json](http://localhost:9258/docs/swagger-ui/index.html?url=/docs/swagger.json#!/routes/get_docs_swagger_json)
 
 [Top](#top)
 
@@ -46,11 +46,11 @@ Now un the command from the project folder to get agora-board up and running:
 
     activator run
 
-You can access the API help visiting [http://localhost:9000/docs/swagger-ui/index.html?url=/docs/swagger.json#!/routes/get_docs_swagger_json](http://localhost:9000/docs/swagger-ui/index.html?url=/docs/swagger.json#!/routes/get_docs_swagger_json) from a web browser.
+You can access the API help visiting [http://localhost:9258/docs/swagger-ui/index.html?url=/docs/swagger.json#!/routes/get_docs_swagger_json](http://localhost:9258/docs/swagger-ui/index.html?url=/docs/swagger.json#!/routes/get_docs_swagger_json) from a web browser.
 
 You can also post a message to the board:
 
-    (curl localhost:9000/bulletin_post -X POST -s -S -H "Content-Type: application/json" --header 'Accept: application/json' -d @-) <<EOF
+    (curl localhost:9258/bulletin_post -X POST -s -S -H "Content-Type: application/json" --header 'Accept: application/json' -d @-) <<EOF
     {
             "message": "m",
             "user_attributes": 

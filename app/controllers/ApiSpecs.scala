@@ -18,13 +18,13 @@
 package controllers.swagger
 
 import javax.inject._
-import scala.concurrent.Future
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.mvc._ 
-import play.api.cache._ 
+
+import scala.concurrent.{ExecutionContext, Future}
+import play.api.mvc._
+import play.api.cache._
 import com.iheart.playSwagger.SwaggerSpecGenerator
 
-class ApiSpecs @Inject() (cached: Cached) extends Controller {
+class ApiSpecs @Inject()(cached: Cached)(implicit ec: ExecutionContext) extends InjectedController {
   implicit val cl = getClass.getClassLoader
 
   // The root package of your domain classes, play-swagger will automatically generate definitions when it encounters class references in this package.
