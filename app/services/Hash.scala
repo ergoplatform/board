@@ -37,7 +37,8 @@ class Hash (message: Base64Message) {
   override def toString(): String = {
     hashValue
   }
-  
+
+  //todo: rewrite using scrypto
   private def calculateHash(msg: Base64Message): String = {
      val hashAlgorithm: HashAlgorithm = HashAlgorithm.SHA512
      val hashMethod = HashMethod.getInstance(hashAlgorithm)
