@@ -92,6 +92,7 @@ object HashService extends BoardJSONFormatter {
     }
     promise.future
   }
+
   // the post has been committed to the immutable log, synchronize futures
   def commit(post: Post) : Future[Unit] = {
     val promise = Promise[Unit]

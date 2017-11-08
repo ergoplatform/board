@@ -40,15 +40,8 @@ import scala.concurrent.{Future, Promise}
  * injected.
  */
 @Singleton
-class FiwareBackend @Inject() 
-                     (ws: WSClient) 
-                     (configuration: services.Config) 
-                     extends BoardBackend 
-                     with BoardJSONFormatter
-                     with FiwareJSONFormatter
-                     with Subscription
-                     with ErrorProcessing
-{  
+class FiwareBackend @Inject() (ws: WSClient) (configuration: services.Config)
+  extends BoardBackend with BoardJSONFormatter with FiwareJSONFormatter with Subscription with ErrorProcessing {
   // Use DSA keys
   private val keyGen = KeyPairGenerator.getInstance("DSA")
   keyGen.initialize(2048)
@@ -78,11 +71,7 @@ class FiwareBackend @Inject()
    * Interpret the answer to a Post message sent to Fiware-Orion.
    * If successful, it will resolve the promise with the BoardAttributes
    */
-  private def fiwareParsePostAnswer
-  (response: WSResponse, 
-   promise: Promise[BoardAttributes], 
-   post: models.Post)
-  {
+  private def fiwareParsePostAnswer(response: WSResponse, promise: Promise[BoardAttributes], post: models.Post) {
     Try(response.json) match {
       case Success(json) => 
         val jsonStr = Json.stringify(json)
@@ -228,10 +217,7 @@ class FiwareBackend @Inject()
    * Interpret the answer to a Get message sent to Fiware-Orion.
    * If successful, it will resolve the promise with the list of Post messages
    */
-   private def fiwareParseGetAnswer
-   (response: WSResponse, 
-    promise: Promise[Seq[Post]]) 
-   {
+   private def fiwareParseGetAnswer(response: WSResponse, promise: Promise[Seq[Post]]) {
      Try(response.json) match {
        case Success(json) => 
          json.validate[SuccessfulGetPost] match {
@@ -345,13 +331,9 @@ class FiwareBackend @Inject()
    * Interpret the answer to a Subscribe message sent to Fiware-Orion.
    * If successful, it will resolve the promise with the list of Post messages
    */
-   private def fiwareParseSubscribeAnswer
-   (
-       response: WSResponse, 
-       promise: Promise[SuccessfulSubscribe], 
-       reference: String
-   )
-   {
+   private def fiwareParseSubscribeAnswer(response: WSResponse,
+                                          promise: Promise[SuccessfulSubscribe],
+                                          reference: String) {
      Try(response.json) match {
        case Success(json) => 
          json.validate[SuccessfulSubscribe] match {
