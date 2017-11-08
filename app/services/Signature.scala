@@ -35,6 +35,8 @@ import java.math.BigInteger
 import scala.util.{Try, Success, Failure}
 import models._
 
+//todo: throw away all the file, replace by the scrypto's Ed25519
+
 case class DSASignature(signerPK: DSAPublicKey, signaturePK: GStarModElement, signature: Pair)
   extends BoardJSONFormatter {
 
@@ -78,6 +80,7 @@ case class DSASignature(signerPK: DSAPublicKey, signaturePK: GStarModElement, si
 }
 
 object SchnorrSigningDevice {
+  //todo: message instead of hash
   def signString(keypair: KeyPair, hash: Hash): DSASignature = {
     val dsaPrivateKey = keypair.getPrivate().asInstanceOf[DSAPrivateKey]
     // group
