@@ -101,12 +101,11 @@ class FiwareBackend @Inject()(ws: WSClient)(configuration: services.Config) exte
     }
   }
    
-   def signPost(post: models.Post, message: String): models.Post = {
+   def signPost(post: models.Post, hash: Hash): models.Post = {
      import java.nio.charset.StandardCharsets._
 
-     val messageBytes = message.getBytes(UTF_8)
-     val signature = Curve25519.sign(privateKey, messageBytes)
-     val verified = Curve25519.verify(signature, messageBytes, publicKey)
+     val signature = Curve25519.sign(privateKey, hash.value)
+     val verified = Curve25519.verify(signature, hash.value, publicKey)
      Logger.info(s"Post Verification $verified")
      val signatureString = SignatureString(new String(publicKey, UTF_8), new String(signature, UTF_8))
 
@@ -116,7 +115,7 @@ class FiwareBackend @Inject()(ws: WSClient)(configuration: services.Config) exte
          models.BoardAttributes(
              post.board_attributes.index, 
              post.board_attributes.timestamp,
-             message,
+             new String(hash.value),
              Some(signatureString)))
    }
    
@@ -179,7 +178,7 @@ class FiwareBackend @Inject()(ws: WSClient)(configuration: services.Config) exte
                  "",
                  None))
            // add signature
-           val post = signPost(postNotSigned, msg)
+           val post = signPost(postNotSigned, hash)
            val data = fiwarePostQuery(post)
            //Logger.info(s"POST data:\n$data\n")
            // send HTTP POST message to Fiware-Orion backend

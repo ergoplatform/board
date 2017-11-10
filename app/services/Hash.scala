@@ -30,15 +30,14 @@ import scala.util.{Failure, Success, Try}
 
 class Hash(message: Base64Message) {
 
-  override def toString(): String = hashValue
+  override def toString(): String = new String(value)
 
-  lazy val hashValue = calculateHash(message)
+  lazy val value = calculateHash(message)
 
-  private def calculateHash(msg: Base64Message): String = {
+  private def calculateHash(msg: Base64Message) = {
     import scorex.crypto.hash._
     val bytes = msg.toString().getBytes(StandardCharsets.UTF_8)
-    val hash = Blake2b256.hash(bytes)
-    new String(hash, StandardCharsets.UTF_8)
+    Blake2b256.hash(bytes)
   }
 }
 
