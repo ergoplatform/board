@@ -26,7 +26,7 @@ import models._
 import play.api.Logger
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.libs.ws.{WSClient, WSResponse}
-import scorex.crypto.signatures.{Curve25519, Signature}
+import scorex.crypto.signatures.{Curve25519, Signature, PublicKey}
 
 import scala.concurrent.{Future, Promise}
 import scala.util.{Failure, Success, Try}
@@ -115,7 +115,7 @@ class FiwareBackend @Inject()(ws: WSClient)(configuration: services.Config) exte
          models.BoardAttributes(
              post.board_attributes.index, 
              post.board_attributes.timestamp,
-             new String(hash.value),
+             hash.value.toString(),
              Some(signatureString)))
    }
    
@@ -133,10 +133,11 @@ class FiwareBackend @Inject()(ws: WSClient)(configuration: services.Config) exte
                  request.user_attributes.section,
                  request.user_attributes.pk,
                  None))
-         val b64 = new Base64Message(request.message)
+         val base64message = new Base64Message(Json.stringify(Json.toJson(leanRequest)))
+         val hash = new Hash(base64message)
          val signatureBytes = Signature @@ signatureStr.signature.getBytes(UTF_8)
-         val messageBytes = b64.toString().replace('=', '.').getBytes(UTF_8)
-         Curve25519.verify(signatureBytes, messageBytes, publicKey)
+         val publicKey = PublicKey @@ signatureStr.signaturePK.getBytes(UTF_8)
+         Curve25519.verify(signatureBytes, hash.value, publicKey)
      }
    }
   
