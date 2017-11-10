@@ -30,7 +30,7 @@ Agora Board has three different layers. The intermediate layer is a Generic Publ
 
 The lowest API is the FIWARE Orion Context Broker and you can find their API documentation on [their repository](https://github.com/telefonicaid/fiware-orion/).
 
-The Board and Elections Machine APIs are documented using Swagger and can be viewed building the project and going to [http://localhost:9258/docs/swagger-ui/index.html?url=/docs/swagger.json](http://localhost:9258/docs/swagger-ui/index.html?url=/docs/swagger.json)
+The Board and Elections Machine APIs are documented using Swagger and can be viewed building the project and going to [http://localhost:9258/docs/swagger-ui/index.html?url=/assets/swagger.json](http://localhost:9258/docs/swagger-ui/index.html?url=/assets/swagger.json)
 
 [Top](#top)
 
@@ -46,7 +46,7 @@ Now un the command from the project folder to get agora-board up and running:
 
     sbt run
 
-You can access the API help visiting [http://localhost:9258/docs/swagger-ui/index.html?url=/docs/swagger.json](http://localhost:9258/docs/swagger-ui/index.html?url=/docs/swagger.json) from a web browser.
+You can access the API help visiting [http://localhost:9258/docs/swagger-ui/index.html?url=/assets/swagger.json](http://localhost:9258/docs/swagger-ui/index.html?url=/assets/swagger.json) from a web browser.
 
 You can also post a message to the board:
 
