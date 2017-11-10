@@ -17,11 +17,6 @@
 
 package models
 
-
-import play.api.libs.ws._
-import scala.util.{Try, Success, Failure}
-import play.api.libs.json._
-
 trait ErrorProcessing {
   /**
    * Get the message safely from a `Throwable`

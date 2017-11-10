@@ -132,48 +132,16 @@
           type: string
         throttling:
           type: string
-    DSAPublicKeyString:
-      type: object
-      required:
-        - y
-        - p
-        - q
-        - g
-      properties:
-        y:
-          type: string
-        p:
-          type: string
-        q:
-          type: string
-        g:
-          type: string
-    SignatureElements:
-      type: object
-      required:
-        - first
-        - second
-        - zmod
-      properties:
-        first:
-          type: string
-        second:
-          type: string
-        zmod:
-          type: string
     SignatureString:
       type: object
       required:
-        - signerPK
         - signaturePK
         - signature
       properties:
-        signerPK:
-          $ref: "#/definitions/DSAPublicKeyString"
         signaturePK:
           type: string
         signature:
-          $ref: "#/definitions/SignatureElements"
+          type: string
     PostRequest:
       type: object
       required:

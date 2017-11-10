@@ -17,19 +17,19 @@
 
 package services
 
-import java.util.concurrent.atomic.AtomicLong
-import java.security.KeyPairGenerator
-import java.util.Base64
 import java.nio.charset.StandardCharsets
+import java.util.Base64
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.{Inject, Singleton}
 
 import models._
 import play.api.Logger
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.libs.ws.{WSClient, WSResponse}
+import scorex.crypto.signatures.{Curve25519, Signature}
 
-import scala.util.{Failure, Success, Try}
 import scala.concurrent.{Future, Promise}
+import scala.util.{Failure, Success, Try}
 
 /** This class implements the BoardBackend and connects to the Fiware-orion
  * context-broker backend.
@@ -40,13 +40,16 @@ import scala.concurrent.{Future, Promise}
  * injected.
  */
 @Singleton
-class FiwareBackend @Inject() (ws: WSClient) (configuration: services.Config)
-  extends BoardBackend with BoardJSONFormatter with FiwareJSONFormatter with Subscription with ErrorProcessing {
-  // Use DSA keys
-  private val keyGen = KeyPairGenerator.getInstance("DSA")
-  keyGen.initialize(2048)
-  // public/private key pair
-  private val keyPair = keyGen.genKeyPair()
+class FiwareBackend @Inject()(ws: WSClient)(configuration: services.Config) extends BoardBackend
+    with BoardJSONFormatter
+    with FiwareJSONFormatter
+    with Subscription
+    with ErrorProcessing {
+
+  import scorex.utils.{Random => RandomBytes}
+  val randomSeed = RandomBytes.randomBytes(64)
+  val (privateKey, publicKey) = Curve25519.createKeyPair(randomSeed)
+
   // Atomic post index counter
   private val index = new AtomicLong(0)
   
@@ -98,22 +101,28 @@ class FiwareBackend @Inject() (ws: WSClient) (configuration: services.Config)
     }
   }
    
-   def signPost(post: models.Post, hash: Hash): models.Post = {
-     val signature = SchnorrSigningDevice.signString(keyPair, hash)
-     val verified = signature.verify(hash)
-       Logger.info(s"Post Verification $verified")
-     val signatureStr = signature.toSignatureString()
+   def signPost(post: models.Post, message: String): models.Post = {
+     import java.nio.charset.StandardCharsets._
+
+     val messageBytes = message.getBytes(UTF_8)
+     val signature = Curve25519.sign(privateKey, messageBytes)
+     val verified = Curve25519.verify(signature, messageBytes, publicKey)
+     Logger.info(s"Post Verification $verified")
+     val signatureString = SignatureString(new String(publicKey, UTF_8), new String(signature, UTF_8))
+
      models.Post(
          post.message, 
          post.user_attributes, 
          models.BoardAttributes(
              post.board_attributes.index, 
-             post.board_attributes.timestamp, 
-             hash.toString(), 
-             Some(signatureStr)))
+             post.board_attributes.timestamp,
+             message,
+             Some(signatureString)))
    }
    
    private def verifyPostRequest(request: PostRequest): Boolean = {
+     import java.nio.charset.StandardCharsets._
+
      request.user_attributes.signature match {
        case None => false
        case Some(signatureStr) => 
@@ -125,12 +134,10 @@ class FiwareBackend @Inject() (ws: WSClient) (configuration: services.Config)
                  request.user_attributes.section,
                  request.user_attributes.pk,
                  None))
-         val base64message = new Base64Message(Json.stringify(Json.toJson(leanRequest)))
-         val hash = new Hash(base64message)
-         DSASignature.fromSignatureString(signatureStr) match {
-           case Some(signature) => signature.verify(hash)
-           case None => false
-         }
+         val b64 = new Base64Message(request.message)
+         val signatureBytes = Signature @@ signatureStr.signature.getBytes(UTF_8)
+         val messageBytes = b64.toString().replace('=', '.').getBytes(UTF_8)
+         Curve25519.verify(signatureBytes, messageBytes, publicKey)
      }
    }
   
@@ -172,7 +179,7 @@ class FiwareBackend @Inject() (ws: WSClient) (configuration: services.Config)
                  "",
                  None))
            // add signature
-           val post = signPost(postNotSigned, hash)
+           val post = signPost(postNotSigned, msg)
            val data = fiwarePostQuery(post)
            //Logger.info(s"POST data:\n$data\n")
            // send HTTP POST message to Fiware-Orion backend

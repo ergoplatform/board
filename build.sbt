@@ -17,7 +17,9 @@ name := """agora-board"""
 
 version := "1.0-SNAPSHOT"
 
-lazy val root = (project in file(".")).enablePlugins(PlayScala)
+lazy val root = (project in file(".")).enablePlugins(PlayScala, SwaggerPlugin)
+
+swaggerDomainNameSpaces := Seq("com.agora-board")
 
 scalaVersion := "2.12.4"
 
@@ -27,8 +29,6 @@ resolvers += Resolver.sonatypeRepo("releases")
 
 resolvers += Resolver.sonatypeRepo("snapshots")
 
-resolvers += "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases"
-
 libraryDependencies ++= Seq(
   jdbc,
   ehcache,
@@ -36,7 +36,6 @@ libraryDependencies ++= Seq(
   ws,
   "com.typesafe.play" %% "play-json" % "2.6.7",
   "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % Test,
-  "com.iheart" %% "play-swagger" % "0.7.1",
   "org.webjars" % "swagger-ui" % "3.2.0",
   "org.scorexfoundation" %% "scrypto" % "2.0.3"
 )

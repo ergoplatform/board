@@ -16,10 +16,10 @@
 **/
 
 package services
-import scala.concurrent.{Future, Promise}
-//import scala.concurrent.ExecutionContext.Implicits.global
 import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, Materializer}
+import akka.stream.ActorMaterializer
+
+import scala.concurrent.{Future, Promise}
 
 trait Subscription {
   implicit val system = ActorSystem()
