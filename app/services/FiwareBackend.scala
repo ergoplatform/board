@@ -27,6 +27,7 @@ import play.api.Logger
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.libs.ws.{WSClient, WSResponse}
 import scorex.crypto.signatures.{Curve25519, Signature, PublicKey}
+import scorex.crypto.encode.{Base64 => ScorexBase64}
 
 import scala.concurrent.{Future, Promise}
 import scala.util.{Failure, Success, Try}
@@ -102,12 +103,10 @@ class FiwareBackend @Inject()(ws: WSClient)(configuration: services.Config) exte
   }
    
    def signPost(post: models.Post, hash: Hash): models.Post = {
-     import java.nio.charset.StandardCharsets._
-
      val signature = Curve25519.sign(privateKey, hash.value)
      val verified = Curve25519.verify(signature, hash.value, publicKey)
      Logger.info(s"Post Verification $verified")
-     val signatureString = SignatureString(new String(publicKey, UTF_8), new String(signature, UTF_8))
+     val signatureString = SignatureString(ScorexBase64.encode(publicKey), ScorexBase64.encode(signature))
 
      models.Post(
          post.message, 
@@ -115,13 +114,11 @@ class FiwareBackend @Inject()(ws: WSClient)(configuration: services.Config) exte
          models.BoardAttributes(
              post.board_attributes.index, 
              post.board_attributes.timestamp,
-             hash.value.toString(),
+             hash.toString(),
              Some(signatureString)))
    }
    
    private def verifyPostRequest(request: PostRequest): Boolean = {
-     import java.nio.charset.StandardCharsets._
-
      request.user_attributes.signature match {
        case None => false
        case Some(signatureStr) => 
@@ -135,8 +132,8 @@ class FiwareBackend @Inject()(ws: WSClient)(configuration: services.Config) exte
                  None))
          val base64message = new Base64Message(Json.stringify(Json.toJson(leanRequest)))
          val hash = new Hash(base64message)
-         val signatureBytes = Signature @@ signatureStr.signature.getBytes(UTF_8)
-         val publicKey = PublicKey @@ signatureStr.signaturePK.getBytes(UTF_8)
+         val signatureBytes = Signature @@ ScorexBase64.decode(signatureStr.signature)
+         val publicKey = PublicKey @@ ScorexBase64.decode(signatureStr.signaturePK)
          Curve25519.verify(signatureBytes, hash.value, publicKey)
      }
    }
